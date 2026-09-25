@@ -365,6 +365,23 @@
         const utils = {
             esc: (str) => String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]),
             formatMoney: (num) => Number(num || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            buildUploadFileName: (docType, item) => {
+                const p = item || {};
+                const year = p.fiscal_year || state.fiscalYear || (new Date().getFullYear() + 543);
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const dateTimeStr = `${y}${m}${d}_${hh}${mm}`;
+                const rawInst = p.institution_name || 'สอศ';
+                const inst = String(rawInst).replace(/[/\\?%*:|"<>]+/g, '-').replace(/\s+/g, '_').trim();
+                const rawName = p.item_name || p.project_name || 'รายการ';
+                let shortName = String(rawName).replace(/[/\\?%*:|"<>]+/g, '-').replace(/\s+/g, '_').trim();
+                if (shortName.length > 40) shortName = shortName.substring(0, 40).replace(/[-_]+$/, '');
+                return `ปี${year}_${docType}_${dateTimeStr}_${inst}_${shortName}.pdf`;
+            },
             formatDate: (dt) => {
                 if (!dt) return '-'; const d = new Date(dt);
                 return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -2497,15 +2514,17 @@
                 ui.openConfirm('ยืนยันอุทธรณ์', 'บันทึกข้อมูลการอุทธรณ์', async () => {
                     ui.showLoader('กำลังอัปโหลดไฟล์ไปที่ Google Drive...');
                     try {
-                        const itemId = (state.selectedItem || state.selectedProject).id;
+                        const itemObj = state.selectedItem || state.selectedProject || {};
+                        const itemId = itemObj.id;
                         let fileLink = null;
                         if (action === 'hold') {
                             const file = document.getElementById('appeal_file')?.files[0];
                             if (file) {
                                 const base64Data = await handlers.getBase64(file);
+                                const uploadFileName = utils.buildUploadFileName('อุทธรณ์', itemObj);
                                 const uploadRes = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
                                     method: "POST",
-                                    body: JSON.stringify({ filename: `appeal_${itemId}_${Date.now()}.pdf`, mimeType: file.type, base64: base64Data }),
+                                    body: JSON.stringify({ filename: uploadFileName, mimeType: file.type, base64: base64Data }),
                                     headers: { "Content-Type": "text/plain;charset=utf-8" }
                                 });
                                 const driveData = await uploadRes.json();
@@ -2590,15 +2609,17 @@
             saveContract: async () => {
                 ui.showLoader('กำลังอัปโหลดไฟล์สัญญาไป Google Drive...');
                 try {
-                    const itemId = (state.selectedItem || state.selectedProject).id;
+                    const itemObj = state.selectedItem || state.selectedProject || {};
+                    const itemId = itemObj.id;
                     const f = document.getElementById('c_file')?.files[0];
                     let fileUrl = '';
                     if (f) {
                         if (f.type !== 'application/pdf') throw new Error('รองรับไฟล์ PDF เท่านั้น');
                         const base64Data = await handlers.getBase64(f);
+                        const uploadFileName = utils.buildUploadFileName('สัญญา', itemObj);
                         const uploadRes = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
                             method: "POST",
-                            body: JSON.stringify({ filename: `contract_${itemId}_${Date.now()}.pdf`, mimeType: f.type, base64: base64Data }),
+                            body: JSON.stringify({ filename: uploadFileName, mimeType: f.type, base64: base64Data }),
                             headers: { "Content-Type": "text/plain;charset=utf-8" }
                         });
                         const driveData = await uploadRes.json();
