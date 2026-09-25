@@ -673,7 +673,7 @@
                                 <div class="flex flex-wrap gap-2 w-full xl:w-auto">
                                     <select id="filterSheet" onchange="handlers.applyDashFilters()" class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none"><option value="ALL">📂 ทุกประเภท</option><option value="ที่ดิน/สิ่งก่อสร้าง">🏗️ ที่ดิน/สิ่งก่อสร้าง</option><option value="ครุภัณฑ์">🖥️ ครุภัณฑ์</option></select>
                                     <select id="filterStatus" onchange="handlers.applyDashFilters()" class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none max-w-xs"><option value="ALL">🔄 ทุกสถานะดำเนินการ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${s}. ${utils.getStatusName(s)}</option>`).join('')}</select>
-                                    <input type="text" id="searchInput" onkeyup="handlers.applyDashFilters()" placeholder="🔍 ค้นหา สถานศึกษา, รายการ..." class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none w-full sm:w-64">
+                                    <input type="text" id="searchInput" oninput="handlers.applyDashFilters()" placeholder="🔍 ค้นหา สถานศึกษา, รายการ..." class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none w-full sm:w-64">
                                 </div>
                             </div>
                             <div id="filterCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 my-4">
@@ -784,13 +784,16 @@
                             </div>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
-                                <input type="text" id="rep_search" placeholder="🔍 ค้นหาครอบคลุมทั้งหมด..." class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none xl:col-span-2">
-                                <select id="rep_year" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกปีงบประมาณ</option>${state.availableYears.map(y => `<option value="${y}" ${y === state.fiscalYear ? 'selected' : ''}>ปี ${y}</option>`).join('')}</select>
-                                <select id="rep_province" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกจังหวัด</option>${provinces.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
-                                <select id="rep_type" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกประเภท</option>${itemTypes.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
-                                <select id="rep_inst" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกสถานศึกษา</option>${institutions.map(i => `<option value="${i}">${i}</option>`).join('')}</select>
-                                <select id="rep_status" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกสถานะ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${s}. ${utils.getStatusName(s)}</option>`).join('')}</select>
-                                <select id="rep_group" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none"><option value="">(ไม่จัดกลุ่ม)</option><option value="province">จัดกลุ่ม: จังหวัด</option><option value="plan_type">จัดกลุ่ม: โครงการ</option><option value="institution_name">จัดกลุ่ม: สถานศึกษา</option><option value="current_status">จัดกลุ่ม: สถานะ</option></select>
+                                <div class="relative xl:col-span-2">
+                                    <input type="text" id="rep_search" oninput="handlers.debounceReportFilters()" onkeydown="if(event.key==='Enter') handlers.applyReportFilters()" placeholder="🔍 ค้นหาครอบคลุมทั้งหมด..." class="border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm outline-none w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                                    <button id="clear_rep_search" onclick="handlers.clearReportSearch()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold hidden" title="ล้างการค้นหา">✕</button>
+                                </div>
+                                <select id="rep_year" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกปีงบประมาณ</option>${state.availableYears.map(y => `<option value="${y}" ${y === state.fiscalYear ? 'selected' : ''}>ปี ${y}</option>`).join('')}</select>
+                                <select id="rep_province" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกจังหวัด</option>${provinces.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
+                                <select id="rep_type" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกประเภท</option>${itemTypes.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
+                                <select id="rep_inst" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกสถานศึกษา</option>${institutions.map(i => `<option value="${i}">${i}</option>`).join('')}</select>
+                                <select id="rep_status" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกสถานะ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${s}. ${utils.getStatusName(s)}</option>`).join('')}</select>
+                                <select id="rep_group" onchange="handlers.applyReportFilters()" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none"><option value="">(ไม่จัดกลุ่ม)</option><option value="province">จัดกลุ่ม: จังหวัด</option><option value="plan_type">จัดกลุ่ม: โครงการ</option><option value="institution_name">จัดกลุ่ม: สถานศึกษา</option><option value="current_status">จัดกลุ่ม: สถานะ</option></select>
                             </div>
 
                             <div id="advanced_filters" class="hidden p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -824,7 +827,6 @@
             },
 
             items: async (skipFetch = false) => {
-                let activeId = document.activeElement ? document.activeElement.id : null;
                 if (!skipFetch) {
                     ui.showLoader();
                     try {
@@ -834,38 +836,38 @@
                         } catch (e) {
                             data = await rpc("custom_get_projects", { p_session_token: state.sessionToken });
                         }
-                        state.items = (data.data || []).map(p => { if (parseInt(p.current_status, 10) < 7) { p.po_amount = 0; p.disbursed_amount = 0; p.contract_signed_date = null; p.contract_end_date = null; p.installment_count = 0; } return p; }); state.itemPage = 1;
+                        state.items = (data.data || []).map(p => { if (parseInt(p.current_status, 10) < 7) { p.po_amount = 0; p.disbursed_amount = 0; p.contract_signed_date = null; p.contract_end_date = null; p.installment_count = 0; } return p; }); 
+                        state.itemPage = 1;
                         const years = [...new Set(state.items.map(p => String(p.fiscal_year || 'ไม่ระบุ')))].sort((a, b) => b.localeCompare(a));
                         state.availableYears = years.length > 0 ? years : [String(new Date().getFullYear() + 543)];
                         if (!state.fiscalYear || !state.availableYears.includes(state.fiscalYear)) state.fiscalYear = state.availableYears[0];
                     } catch (e) { ui.toast(e.message, 'error'); ui.hideLoader(); return; }
                 }
 
-                const filteredItems = state.items.filter(p => {
-                    const matchYear = String(p.fiscal_year || 'ไม่ระบุ') === state.fiscalYear;
-                    const searchStr = state.itemSearch.toLowerCase();
-                    const itemName = p.item_name || p.project_name || '';
-                    const itemCode = p.item_code || p.project_code || '';
-                    const matchSearch = searchStr === '' || itemName.toLowerCase().includes(searchStr) || (p.institution_name || '').toLowerCase().includes(searchStr) || (p.budget_code || '').toLowerCase().includes(searchStr) || itemCode.toLowerCase().includes(searchStr);
-                    return matchYear && matchSearch;
-                });
-
-                const totalItems = filteredItems.length; const totalPages = Math.ceil(totalItems / state.itemLimit) || 1;
-                const startIdx = (state.itemPage - 1) * state.itemLimit; const displayItems = filteredItems.slice(startIdx, startIdx + state.itemLimit);
-
-                let html = `<div class="flex flex-col xl:flex-row justify-between xl:items-center gap-4 mb-6"><h2 class="text-2xl font-bold text-slate-800 tracking-tight">การรายงานผล</h2><div class="flex flex-wrap items-center gap-2"><input type="text" id="search_items" value="${utils.esc(state.itemSearch)}" onkeyup="handlers.searchItems(this.value)" placeholder="🔍 ค้นหารหัส, ชื่อรายการ, สถานศึกษา..." class="bg-white border border-slate-200 text-slate-700 rounded-xl px-4 py-2.5 outline-none w-full sm:w-64"><select onchange="handlers.changeYear(this.value)" class="bg-white border border-slate-200 text-slate-700 rounded-xl px-4 py-2.5 outline-none font-bold">${state.availableYears.map(y => `<option value="${y}" ${y === state.fiscalYear ? 'selected' : ''}>ปีงบประมาณ ${y}</option>`).join('')}</select>${state.user.role === 'admin' ? `<button onclick="handlers.openCreateModal()" class="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-800 shadow-sm">+ เพิ่มรายการ</button>` : ''}</div></div>`;
-                if (totalItems === 0) { html += `<div class="p-12 text-center bg-white border border-dashed border-slate-300 rounded-2xl text-slate-400"><div class="text-4xl mb-3">📁</div><div class="font-medium text-lg text-slate-600">ไม่พบข้อมูลรายการที่ค้นหา</div></div>`; }
-                else {
-                    html += `<div class="space-y-4 mb-6">${displayItems.map(p => {
-                        const itemName = p.item_name || p.project_name || '';
-                        const itemType = p.item_type || p.project_type || '';
-                        return `<div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 card-hover shadow-sm"><div><div class="flex items-center gap-2 mb-2">${p.budget_code ? `<span class="text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md uppercase font-mono">${utils.esc(p.budget_code)}</span>` : `<span class="text-[10px] font-medium tracking-wider bg-slate-100 text-slate-400 px-2.5 py-1 rounded-md">ยังไม่ระบุรหัสงบฯ</span>`}${p.fiscal_year ? `<span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md">ปี ${utils.esc(p.fiscal_year)}</span>` : ''}</div><h3 class="font-bold text-lg text-slate-800">${utils.esc(itemName)}</h3><div class="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-sm"><span class="text-slate-500">งบตาม พรบ.: <b class="text-blue-600">฿${utils.formatMoney(p.budget_amount)}</b></span><span class="text-slate-500">ประเภท: <b>${utils.esc(itemType)}</b></span>${state.user.role === 'admin' ? `<span class="text-slate-500">สถานศึกษา: <b class="text-primary">${utils.esc(p.institution_name)}</b></span>` : ''}</div></div><div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row lg:items-end xl:items-center gap-3"><span class="px-3 py-1.5 text-xs rounded-full border font-bold text-center w-fit ${utils.getStatusColor(p.current_status)}">${p.current_status}. ${utils.getStatusName(p.current_status)}</span><div class="flex flex-wrap gap-2 mt-3 sm:mt-0"><button onclick="handlers.openEditItemModal('${p.id}')" class="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-50">✏️ แก้ไข</button>${state.user.role === 'admin' ? `<button onclick="handlers.confirmDeleteItem('${p.id}', '${utils.esc(itemName)}')" class="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50">🗑️ ลบ</button>` : ''}<button onclick="app.navigate('workflow', '${p.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium transition shadow-sm whitespace-nowrap">รายงานผล →</button></div></div></div>`;
-                    }).join('')}</div>`;
-                    html += `<div class="flex items-center justify-between bg-white px-4 py-3 border border-slate-200 rounded-xl shadow-sm"><div class="text-sm text-slate-500">แสดง <span class="font-medium text-slate-900">${startIdx + 1}</span> ถึง <span class="font-medium text-slate-900">${Math.min(startIdx + state.itemLimit, totalItems)}</span> จาก <span class="font-medium text-slate-900">${totalItems}</span></div><div class="flex gap-2"><button onclick="handlers.changeItemPage(${state.itemPage - 1})" ${state.itemPage === 1 ? 'disabled class="px-3 py-1.5 rounded-lg border text-sm text-slate-400 bg-slate-50"' : 'class="px-3 py-1.5 rounded-lg border text-sm hover:bg-slate-50 font-medium"'}>ก่อนหน้า</button><button onclick="handlers.changeItemPage(${state.itemPage + 1})" ${state.itemPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-lg border text-sm text-slate-400 bg-slate-50"' : 'class="px-3 py-1.5 rounded-lg border text-sm hover:bg-slate-50 font-medium"'}>ถัดไป</button></div></div>`;
+                if (skipFetch && document.getElementById('itemsContainer')) {
+                    handlers.renderItemsList();
+                    return;
                 }
+
+                let html = `<div class="flex flex-col xl:flex-row justify-between xl:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">การรายงานผล</h2>
+                        <p class="text-sm text-slate-500 mt-0.5">ติดตามและบันทึกความก้าวหน้ารายการงบลงทุน</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative w-full sm:w-72">
+                            <input type="text" id="search_items" value="${utils.esc(state.itemSearch)}" oninput="handlers.searchItems(this.value)" placeholder="🔍 ค้นหารหัส, ชื่อรายการ, สถานศึกษา..." class="bg-white border border-slate-200 text-slate-700 rounded-xl pl-4 pr-9 py-2.5 outline-none w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition shadow-2xs">
+                            <button id="clear_search_items" onclick="handlers.clearItemSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold ${state.itemSearch ? '' : 'hidden'}" title="ล้างการค้นหา">✕</button>
+                        </div>
+                        <select id="select_fiscal_year" onchange="handlers.changeYear(this.value)" class="bg-white border border-slate-200 text-slate-700 rounded-xl px-4 py-2.5 outline-none font-bold">${state.availableYears.map(y => `<option value="${y}" ${y === state.fiscalYear ? 'selected' : ''}>ปีงบประมาณ ${y}</option>`).join('')}</select>
+                        ${state.user.role === 'admin' ? `<button onclick="handlers.openCreateModal()" class="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-800 shadow-sm">+ เพิ่มรายการ</button>` : ''}
+                    </div>
+                </div>
+                <div id="itemsContainer"></div>`;
+
                 document.getElementById('page-container').innerHTML = html;
+                handlers.renderItemsList();
                 if (!skipFetch) ui.hideLoader();
-                if (activeId) setTimeout(() => document.getElementById(activeId)?.focus(), 0);
             },
             projects: async (skipFetch = false) => pages.items(skipFetch),
 
@@ -1376,12 +1378,136 @@
 
                 // Pie charts removed
             },
-            changeYear: (year) => { state.fiscalYear = year; if (state.currentRoute === 'dashboard') pages.dashboard(); else if (state.currentRoute === 'items' || state.currentRoute === 'projects') { state.itemPage = 1; pages.items(true); } else if (state.currentRoute === 'report') { handlers.applyReportFilters(); } },
-            changeItemPage: (p) => { state.itemPage = p; pages.items(true); },
+            changeYear: (year) => { 
+                state.fiscalYear = year; 
+                if (state.currentRoute === 'dashboard') {
+                    pages.dashboard(); 
+                } else if (state.currentRoute === 'items' || state.currentRoute === 'projects') { 
+                    state.itemPage = 1; 
+                    if (document.getElementById('itemsContainer')) {
+                        const sel = document.getElementById('select_fiscal_year');
+                        if (sel && sel.value !== year) sel.value = year;
+                        handlers.renderItemsList();
+                    } else {
+                        pages.items(true); 
+                    }
+                } else if (state.currentRoute === 'report') { 
+                    const repYear = document.getElementById('rep_year');
+                    if (repYear && repYear.value !== year) repYear.value = year;
+                    handlers.applyReportFilters(); 
+                } 
+            },
+            changeItemPage: (p) => { 
+                state.itemPage = p; 
+                if (document.getElementById('itemsContainer')) {
+                    handlers.renderItemsList();
+                } else {
+                    pages.items(true); 
+                }
+            },
             changeProjectPage: (p) => handlers.changeItemPage(p),
             changeAuditPage: (p) => { state.auditPage = p; pages.audit(); },
-            searchItems: (val) => { state.itemSearch = val; state.itemPage = 1; pages.items(true); },
+            searchItems: (val) => { 
+                state.itemSearch = val; 
+                state.itemPage = 1; 
+                if (document.getElementById('itemsContainer')) {
+                    handlers.renderItemsList();
+                } else {
+                    pages.items(true); 
+                }
+            },
             searchProjects: (val) => handlers.searchItems(val),
+            clearItemSearch: () => {
+                state.itemSearch = '';
+                state.itemPage = 1;
+                const inp = document.getElementById('search_items');
+                if (inp) {
+                    inp.value = '';
+                    inp.focus();
+                }
+                if (document.getElementById('itemsContainer')) {
+                    handlers.renderItemsList();
+                } else {
+                    pages.items(true); 
+                }
+            },
+            clearProjectSearch: () => handlers.clearItemSearch(),
+            renderItemsList: () => {
+                const container = document.getElementById('itemsContainer');
+                if (!container) return;
+
+                const searchStr = (state.itemSearch || '').toLowerCase().trim();
+                const clearBtn = document.getElementById('clear_search_items');
+                if (clearBtn) {
+                    if (searchStr) clearBtn.classList.remove('hidden');
+                    else clearBtn.classList.add('hidden');
+                }
+
+                const filteredItems = (state.items || []).filter(p => {
+                    const matchYear = String(p.fiscal_year || 'ไม่ระบุ') === state.fiscalYear;
+                    const itemName = p.item_name || p.project_name || '';
+                    const itemCode = p.item_code || p.project_code || '';
+                    const matchSearch = searchStr === '' ||
+                        itemName.toLowerCase().includes(searchStr) ||
+                        (p.institution_name || '').toLowerCase().includes(searchStr) ||
+                        (p.budget_code || '').toLowerCase().includes(searchStr) ||
+                        itemCode.toLowerCase().includes(searchStr);
+                    return matchYear && matchSearch;
+                });
+
+                const totalItems = filteredItems.length;
+                const totalPages = Math.ceil(totalItems / state.itemLimit) || 1;
+                if (state.itemPage > totalPages) state.itemPage = totalPages;
+                if (state.itemPage < 1) state.itemPage = 1;
+                const startIdx = (state.itemPage - 1) * state.itemLimit;
+                const displayItems = filteredItems.slice(startIdx, startIdx + state.itemLimit);
+
+                if (totalItems === 0) {
+                    container.innerHTML = `<div class="p-12 text-center bg-white border border-dashed border-slate-300 rounded-2xl text-slate-400">
+                        <div class="text-4xl mb-3">📁</div>
+                        <div class="font-medium text-lg text-slate-600">ไม่พบข้อมูลรายการที่ค้นหา</div>
+                        ${searchStr ? `<p class="text-xs text-slate-400 mt-1">คำค้นหา "${utils.esc(state.itemSearch)}" ในปีงบประมาณ ${state.fiscalYear}</p>` : ''}
+                    </div>`;
+                    return;
+                }
+
+                let html = `<div class="space-y-4 mb-6">${displayItems.map(p => {
+                    const itemName = p.item_name || p.project_name || '';
+                    const itemType = p.item_type || p.project_type || '';
+                    return `<div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 card-hover shadow-sm">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                ${p.budget_code ? `<span class="text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md uppercase font-mono">${utils.esc(p.budget_code)}</span>` : `<span class="text-[10px] font-medium tracking-wider bg-slate-100 text-slate-400 px-2.5 py-1 rounded-md">ยังไม่ระบุรหัสงบฯ</span>`}
+                                ${p.fiscal_year ? `<span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md">ปี ${utils.esc(p.fiscal_year)}</span>` : ''}
+                            </div>
+                            <h3 class="font-bold text-lg text-slate-800">${utils.esc(itemName)}</h3>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-sm">
+                                <span class="text-slate-500">งบตาม พรบ.: <b class="text-blue-600">฿${utils.formatMoney(p.budget_amount)}</b></span>
+                                <span class="text-slate-500">ประเภท: <b>${utils.esc(itemType)}</b></span>
+                                ${state.user.role === 'admin' ? `<span class="text-slate-500">สถานศึกษา: <b class="text-primary">${utils.esc(p.institution_name)}</b></span>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row lg:items-end xl:items-center gap-3">
+                            <span class="px-3 py-1.5 text-xs rounded-full border font-bold text-center w-fit ${utils.getStatusColor(p.current_status)}">${p.current_status}. ${utils.getStatusName(p.current_status)}</span>
+                            <div class="flex flex-wrap gap-2 mt-3 sm:mt-0">
+                                <button onclick="handlers.openEditItemModal('${p.id}')" class="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-50">✏️ แก้ไข</button>
+                                ${state.user.role === 'admin' ? `<button onclick="handlers.confirmDeleteItem('${p.id}', '${utils.esc(itemName)}')" class="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50">🗑️ ลบ</button>` : ''}
+                                <button onclick="app.navigate('workflow', '${p.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium transition shadow-sm whitespace-nowrap">รายงานผล →</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}</div>`;
+
+                html += `<div class="flex items-center justify-between bg-white px-4 py-3 border border-slate-200 rounded-xl shadow-sm">
+                    <div class="text-sm text-slate-500">แสดง <span class="font-medium text-slate-900">${startIdx + 1}</span> ถึง <span class="font-medium text-slate-900">${Math.min(startIdx + state.itemLimit, totalItems)}</span> จาก <span class="font-medium text-slate-900">${totalItems}</span></div>
+                    <div class="flex gap-2">
+                        <button onclick="handlers.changeItemPage(${state.itemPage - 1})" ${state.itemPage === 1 ? 'disabled class="px-3 py-1.5 rounded-lg border text-sm text-slate-400 bg-slate-50"' : 'class="px-3 py-1.5 rounded-lg border text-sm hover:bg-slate-50 font-medium"'}>ก่อนหน้า</button>
+                        <button onclick="handlers.changeItemPage(${state.itemPage + 1})" ${state.itemPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-lg border text-sm text-slate-400 bg-slate-50"' : 'class="px-3 py-1.5 rounded-lg border text-sm hover:bg-slate-50 font-medium"'}>ถัดไป</button>
+                    </div>
+                </div>`;
+
+                container.innerHTML = html;
+            },
             renderUsersTable: () => {
                 const container = document.getElementById('usersTableContainer');
                 if (!container) return;
@@ -1526,6 +1652,29 @@
             toggleAdvancedFilters: () => {
                 const el = document.getElementById('advanced_filters');
                 if (el) el.classList.toggle('hidden');
+            },
+
+            debounceReportFilters: () => {
+                const search = (document.getElementById('rep_search')?.value || '').trim();
+                const clearBtn = document.getElementById('clear_rep_search');
+                if (clearBtn) {
+                    if (search) clearBtn.classList.remove('hidden');
+                    else clearBtn.classList.add('hidden');
+                }
+                clearTimeout(window._repFilterTimer);
+                window._repFilterTimer = setTimeout(() => {
+                    handlers.applyReportFilters();
+                }, 300);
+            },
+            clearReportSearch: () => {
+                const inp = document.getElementById('rep_search');
+                if (inp) {
+                    inp.value = '';
+                    inp.focus();
+                }
+                const clearBtn = document.getElementById('clear_rep_search');
+                if (clearBtn) clearBtn.classList.add('hidden');
+                handlers.applyReportFilters();
             },
 
             applyReportFilters: () => {
