@@ -706,14 +706,14 @@
                                     <input type="text" id="searchInput" oninput="handlers.applyDashFilters()" placeholder="🔍 ค้นหา สถานศึกษา, รายการ..." class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none w-full sm:w-64">
                                 </div>
                             </div>
-                            <div id="filterCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 my-4">
+                            <div id="filterCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 my-4">
                                 <!-- Dynamic cards go here -->
                             </div>
                             <div class="relative w-full h-80 sm:h-96 mb-6 border border-slate-100 rounded-2xl bg-slate-50/50 p-4">
                                 <canvas id="filterStagesBarChart"></canvas>
                             </div>
                             <div class="overflow-x-auto max-h-[500px] rounded-xl border border-slate-200 shadow-sm custom-scrollbar">
-                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r min-w-[120px]">รหัสงบประมาณ</th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r">สถานศึกษา</th><th class="p-3 font-semibold border-r">ชื่อรายการ</th><th class="p-3 font-semibold text-center border-r min-w-[130px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="ผลต่างวงเงินลงนามสัญญา - เบิกจ่ายแล้ว">คงเหลือตามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="ผลต่างงบประมาณรวม - วงเงินลงนามสัญญา">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
+                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r min-w-[120px]">รหัสงบประมาณ</th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r">สถานศึกษา</th><th class="p-3 font-semibold border-r">ชื่อรายการ</th><th class="p-3 font-semibold text-center border-r min-w-[130px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
                             </div>
                             <div class="flex justify-between items-center text-xs text-gray-500 pt-2"><span id="tableCount">แสดง 0 รายการ</span></div>
                         </section>`;
@@ -1200,22 +1200,24 @@
         const handlers = {
             // --- แดชบอร์ด (การ์ด & กราฟ & ฟิลเตอร์) ---
             renderDashSummaryCards: (data) => {
-                let tBud = 0, tPO = 0, tDis = 0;
+                let tBud = 0, tSign = 0, tDis = 0;
                 (data || []).forEach(p => {
                     tBud += (Number(p.budget) || 0);
-                    tPO += (Number(p.poAmount) || 0);
+                    tSign += (Number(p.poAmount) || 0);
                     tDis += (Number(p.disbursed) || 0);
                 });
 
-                const remPO = Math.max(0, tPO - tDis);
-                const remBud = Math.max(0, tBud - tPO);
+                const tPO = Math.max(0, tSign - tDis);
+                const tExp = tSign > 0 ? (tPO + tDis) : 0;
+                const tRemBud = Math.max(0, tBud - tExp);
 
                 const cards = [
                     { t: 'งบประมาณรวม', amt: tBud, pct: 100, bg: 'bg-gradient-to-br from-blue-600 to-indigo-700', ic: '🏛️', count: (data || []).length, tip: 'งบประมาณตาม พ.ร.บ. ทั้งหมด' },
-                    { t: 'ทำสัญญา PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '📝', count: (data || []).filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'วงเงินที่ลงนามสัญญาและก่อหนี้ผูกพันแล้ว' },
-                    { t: 'เบิกจ่ายแล้ว', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', ic: '💸', count: (data || []).filter(i => Number(i.disbursed) > 0).length, tip: 'ยอดเงินที่เบิกจ่ายตามงวดงานจริง' },
-                    { t: 'คงเหลือตามลงนามสัญญา', amt: remPO, pct: tBud ? ((remPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: (data || []).filter(i => (Number(i.poAmount) > 0 || i.statusNo >= 7) && ((Number(i.poAmount) || 0) - (Number(i.disbursed) || 0) > 0)).length, tip: 'ผลต่างวงเงินสัญญา - เบิกจ่ายแล้ว (เงินรอเบิกจ่ายตามงวดงาน)' },
-                    { t: 'งบประมาณคงเหลือ', amt: remBud, pct: tBud ? ((remBud / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: (data || []).filter(i => (Number(i.budget) || 0) - (Number(i.poAmount) || 0) > 0).length, tip: 'ผลต่างงบประมาณรวม - ลงนามสัญญา (เงินเหลือจ่ายและงบรอผูกพัน)' }
+                    { t: 'ลงนามสัญญา', amt: tSign, pct: tBud ? ((tSign / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '✍️', count: (data || []).filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'วงเงินที่ลงนามสัญญาและก่อหนี้ผูกพันแล้ว (สถานะ 7)' },
+                    { t: 'PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: (data || []).filter(i => (Number(i.poAmount) > 0 || i.statusNo >= 7) && ((Number(i.poAmount) || 0) - (Number(i.disbursed) || 0) > 0)).length, tip: 'วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)' },
+                    { t: 'เบิกจ่ายแล้ว', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', ic: '💵', count: (data || []).filter(i => Number(i.disbursed) > 0).length, tip: 'ยอดเงินที่เบิกจ่ายตามงวดงานจริง' },
+                    { t: 'ผลการใช้จ่าย', amt: tExp, pct: tBud ? ((tExp / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-600 to-blue-700', ic: '📈', count: (data || []).filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)' },
+                    { t: 'งบประมาณคงเหลือ', amt: tRemBud, pct: tBud ? ((tRemBud / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: (data || []).filter(i => (Number(i.budget) || 0) - (Number(i.poAmount) || 0) > 0).length, tip: 'งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)' }
                 ];
 
                 let html = '';
@@ -1311,18 +1313,20 @@
                     return matchSheet && matchStatus && matchSearch;
                 });
 
-                let tBud = 0, tPO = 0, tDis = 0;
-                filtered.forEach(i => { tBud += (Number(i.budget) || 0); tPO += (Number(i.poAmount) || 0); tDis += (Number(i.disbursed) || 0); });
+                let tBud = 0, tSign = 0, tDis = 0;
+                filtered.forEach(i => { tBud += (Number(i.budget) || 0); tSign += (Number(i.poAmount) || 0); tDis += (Number(i.disbursed) || 0); });
 
-                const remPO = Math.max(0, tPO - tDis);
-                const remBud = Math.max(0, tBud - tPO);
+                const tPO = Math.max(0, tSign - tDis);
+                const tExp = tSign > 0 ? (tPO + tDis) : 0;
+                const tRemBud = Math.max(0, tBud - tExp);
 
                 const fCards = [
                     { t: 'งบประมาณรวม', amt: tBud, pct: 100, bg: 'bg-gradient-to-br from-blue-600 to-indigo-700', ic: '💎', count: filtered.length, tip: 'งบประมาณตาม พ.ร.บ. ทั้งหมด' },
-                    { t: 'ทำสัญญา PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '✍️', count: filtered.filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'วงเงินที่ลงนามสัญญาและก่อหนี้ผูกพันแล้ว' },
+                    { t: 'ลงนามสัญญา', amt: tSign, pct: tBud ? ((tSign / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '✍️', count: filtered.filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'วงเงินที่ลงนามสัญญาและก่อหนี้ผูกพันแล้ว (สถานะ 7)' },
+                    { t: 'PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: filtered.filter(i => (Number(i.poAmount) > 0 || i.statusNo >= 7) && ((Number(i.poAmount) || 0) - (Number(i.disbursed) || 0) > 0)).length, tip: 'วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)' },
                     { t: 'เบิกจ่ายแล้ว', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', ic: '💵', count: filtered.filter(i => Number(i.disbursed) > 0).length, tip: 'ยอดเงินที่เบิกจ่ายตามงวดงานจริง' },
-                    { t: 'คงเหลือตามลงนามสัญญา', amt: remPO, pct: tBud ? ((remPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: filtered.filter(i => (Number(i.poAmount) > 0 || i.statusNo >= 7) && ((Number(i.poAmount) || 0) - (Number(i.disbursed) || 0) > 0)).length, tip: 'ผลต่างวงเงินสัญญา - เบิกจ่ายแล้ว (เงินรอเบิกจ่ายตามงวดงาน)' },
-                    { t: 'งบประมาณคงเหลือ', amt: remBud, pct: tBud ? ((remBud / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: filtered.filter(i => (Number(i.budget) || 0) - (Number(i.poAmount) || 0) > 0).length, tip: 'ผลต่างงบประมาณรวม - ลงนามสัญญา (เงินเหลือจ่ายและงบรอผูกพัน)' }
+                    { t: 'ผลการใช้จ่าย', amt: tExp, pct: tBud ? ((tExp / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-600 to-blue-700', ic: '📈', count: filtered.filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)' },
+                    { t: 'งบประมาณคงเหลือ', amt: tRemBud, pct: tBud ? ((tRemBud / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: filtered.filter(i => (Number(i.budget) || 0) - (Number(i.poAmount) || 0) > 0).length, tip: 'งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)' }
                 ];
 
                 let fHtml = '';
@@ -1357,8 +1361,9 @@
                         <td class="p-3 text-center border-r border-slate-100"><span class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold border shadow-xs whitespace-nowrap inline-block ${utils.getStatusColor(r.statusNo)}">${utils.esc(r.status)}</span></td>
                         <td class="p-3 text-right font-bold text-slate-800 border-r border-slate-100">${utils.formatMoney(r.budget)}</td>
                         <td class="p-3 text-right font-medium text-indigo-600 border-r border-slate-100">${utils.formatMoney(r.poAmount)}</td>
-                        <td class="p-3 text-right font-medium text-emerald-600 border-r border-slate-100">${utils.formatMoney(r.disbursed)}</td>
                         <td class="p-3 text-right font-semibold text-amber-600 bg-amber-50/20 border-r border-slate-100">${r.poAmount > 0 ? utils.formatMoney(Math.max(0, r.poAmount - r.disbursed)) : '-'}</td>
+                        <td class="p-3 text-right font-medium text-emerald-600 border-r border-slate-100">${utils.formatMoney(r.disbursed)}</td>
+                        <td class="p-3 text-right font-bold text-indigo-600 bg-indigo-50/20 border-r border-slate-100">${r.poAmount > 0 ? utils.formatMoney(r.poAmount) : '-'}</td>
                         <td class="p-3 text-right font-bold text-purple-600 bg-purple-50/20 border-r border-slate-100">${utils.formatMoney(Math.max(0, r.budget - (r.poAmount || 0)))}</td>
                         <td class="p-3 text-center text-slate-500 border-r border-slate-100">${utils.formatDateOnly(r.contractSignedDate)}</td>
                         <td class="p-3 text-center border-r border-slate-100">${utils.getContractCountdownBadge(r.contractEndDate)}</td>
@@ -1409,7 +1414,7 @@
                     });
                 }
 
-                if (document.getElementById('dashTableBody')) document.getElementById('dashTableBody').innerHTML = html || `<tr><td colspan="14" class="p-8 text-center text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
+                if (document.getElementById('dashTableBody')) document.getElementById('dashTableBody').innerHTML = html || `<tr><td colspan="15" class="p-8 text-center text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
                 if (document.getElementById('tableCount')) document.getElementById('tableCount').innerText = `แสดง ${Math.min(filtered.length, 100)} จาก ${filtered.length} รายการ`;
 
                 // Pie charts removed
@@ -1649,9 +1654,11 @@
                     { id: 'col_item', name: 'รายการ', default: true },
                     { id: 'col_stat', name: 'สถานะ', default: true },
                     { id: 'col_bud', name: 'งบประมาณ', default: true },
-                    { id: 'col_po', name: 'ลงนามสัญญา', default: true },
+                    { id: 'col_sign', name: 'ลงนามสัญญา', default: true },
+                    { id: 'col_po', name: 'PO', default: true },
                     { id: 'col_dis', name: 'เบิกจ่ายแล้ว', default: true },
-                    { id: 'col_rem', name: 'คงเหลือ', default: true },
+                    { id: 'col_exp', name: 'ผลการใช้จ่าย', default: true },
+                    { id: 'col_rem', name: 'งบประมาณคงเหลือ', default: true },
                     { id: 'col_start', name: 'เริ่มสัญญา', default: true },
                     { id: 'col_end', name: 'สิ้นสุดสัญญา', default: true },
                     { id: 'col_prog', name: 'งวดงาน', default: true },
@@ -1675,7 +1682,7 @@
                 ui.openModal('👁️ ตั้งค่าการแสดงคอลัมน์', html);
             },
             saveColumnSettings: () => {
-                const cols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_po', 'col_dis', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
+                const cols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
                 if (!window.reportColsState) window.reportColsState = {};
                 cols.forEach(c => {
                     const el = document.getElementById(`chk_${c}`);
@@ -1714,7 +1721,7 @@
             },
 
             applyReportFilters: () => {
-                const defaultCols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_po', 'col_dis', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
+                const defaultCols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
                 if (!window.reportColsState) window.reportColsState = {};
                 defaultCols.forEach(c => {
                     if (window.reportColsState[c] === undefined) window.reportColsState[c] = true;
@@ -1786,9 +1793,11 @@
                 if (cols.col_stat) thead += `<th class="p-3 font-semibold text-center border-r min-w-[150px]">สถานะ</th>`;
 
                 if (cols.col_bud) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">งบประมาณ</th>`;
-                if (cols.col_po) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">ลงนามสัญญา</th>`;
+                if (cols.col_sign) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">ลงนามสัญญา</th>`;
+                if (cols.col_po) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px] bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th>`;
                 if (cols.col_dis) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">เบิกจ่ายแล้ว</th>`;
-                if (cols.col_rem) thead += `<th class="p-3 font-semibold text-right bg-orange-50/50 border-r min-w-[100px]">คงเหลือ</th>`;
+                if (cols.col_exp) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px] bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th>`;
+                if (cols.col_rem) thead += `<th class="p-3 font-semibold text-right bg-purple-50/60 text-purple-900 border-r min-w-[100px]" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th>`;
                 if (cols.col_start) thead += `<th class="p-3 font-semibold text-center border-l min-w-[100px]">เริ่มสัญญา</th>`;
                 if (cols.col_end) thead += `<th class="p-3 font-semibold text-center border-l min-w-[135px]">สิ้นสุดสัญญา</th>`;
                 if (cols.col_prog) thead += `<th class="p-3 font-semibold border-l text-center min-w-[120px]">งวดงาน</th>`;
@@ -1797,7 +1806,7 @@
                 if (cols.col_resp_phone) thead += `<th class="p-3 font-semibold border-l min-w-[110px] text-center">เบอร์โทรศัพท์</th>`;
                 thead += '</tr>';
 
-                let tBud = 0, tPO = 0, tDis = 0, tRem = 0; let tbody = '';
+                let tBud = 0, tSign = 0, tPO = 0, tDis = 0, tExp = 0, tRem = 0; let tbody = '';
 
                 // Grouping Logic
                 let groupedData = {};
@@ -1814,8 +1823,14 @@
 
                 // Render row function
                 const renderRow = (p) => {
-                    const b = Number(p.budget_amount) || 0; const po = Number(p.po_amount) || 0; const dis = Number(p.disbursed_amount) || 0; const rem = b - dis;
-                    tBud += b; tPO += po; tDis += dis; tRem += rem;
+                    const b = Number(p.budget_amount) || 0;
+                    const sign = Number(p.po_amount) || 0;
+                    const dis = Number(p.disbursed_amount) || 0;
+                    const po = sign > 0 ? Math.max(0, sign - dis) : 0;
+                    const exp = sign > 0 ? (po + dis) : 0;
+                    const rem = Math.max(0, b - exp);
+
+                    tBud += b; tSign += sign; tPO += po; tDis += dis; tExp += exp; tRem += rem;
 
                     const isDelayed = p.current_status < 8 && p.contract_end_date && new Date(p.contract_end_date) < new Date();
                     const isCompleted = b > 0 && dis >= b;
@@ -1842,9 +1857,11 @@
                     if (cols.col_stat) row += `<td class="p-3 text-center border-r border-slate-100"><span class="px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl border shadow-xs whitespace-nowrap inline-block ${utils.getStatusColor(p.current_status)}">${p.current_status}. ${utils.getStatusName(p.current_status)}</span></td>`;
 
                     if (cols.col_bud) row += `<td class="p-3 text-right font-bold text-slate-800 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(b)}</td>`;
-                    if (cols.col_po) row += `<td class="p-3 text-right font-medium text-indigo-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(po)}</td>`;
+                    if (cols.col_sign) row += `<td class="p-3 text-right font-medium text-indigo-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(sign)}</td>`;
+                    if (cols.col_po) row += `<td class="p-3 text-right font-semibold text-amber-600 bg-amber-50/20 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${sign > 0 ? utils.formatMoney(po) : '-'}</td>`;
                     if (cols.col_dis) row += `<td class="p-3 text-right font-medium text-emerald-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(dis)}</td>`;
-                    if (cols.col_rem) row += `<td class="p-3 text-right font-bold text-orange-600 bg-orange-50/30 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(rem)}</td>`;
+                    if (cols.col_exp) row += `<td class="p-3 text-right font-bold text-indigo-600 bg-indigo-50/20 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${sign > 0 ? utils.formatMoney(exp) : '-'}</td>`;
+                    if (cols.col_rem) row += `<td class="p-3 text-right font-bold text-purple-600 bg-purple-50/20 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(rem)}</td>`;
 
                     if (cols.col_start) row += `<td class="p-3 text-center text-slate-500 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatDateOnly(p.contract_signed_date)}</td>`;
                     if (cols.col_end) row += `<td class="p-3 text-center border-r border-slate-100 ${isDelayed ? 'font-bold' : ''} ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.getContractCountdownBadge(p.contract_end_date)}</td>`;
@@ -1866,8 +1883,16 @@
                 if (groupBy && groupBy !== '') {
                     for (const groupKey in groupedData) {
                         const groupItems = groupedData[groupKey];
-                        let gBud = 0, gPO = 0, gDis = 0, gRem = 0;
-                        groupItems.forEach(p => { gBud += Number(p.budget_amount) || 0; gPO += Number(p.po_amount) || 0; gDis += Number(p.disbursed_amount) || 0; gRem += (Number(p.budget_amount) || 0) - (Number(p.disbursed_amount) || 0); });
+                        let gBud = 0, gSign = 0, gPO = 0, gDis = 0, gExp = 0, gRem = 0;
+                        groupItems.forEach(p => {
+                            const b = Number(p.budget_amount) || 0;
+                            const sign = Number(p.po_amount) || 0;
+                            const dis = Number(p.disbursed_amount) || 0;
+                            const po = sign > 0 ? Math.max(0, sign - dis) : 0;
+                            const exp = sign > 0 ? (po + dis) : 0;
+                            const rem = Math.max(0, b - exp);
+                            gBud += b; gSign += sign; gPO += po; gDis += dis; gExp += exp; gRem += rem;
+                        });
 
                         let prefixName = '';
                         if (groupBy === 'province') prefixName = 'จังหวัด: ';
@@ -1878,9 +1903,11 @@
                         tbody += `<tr class="bg-blue-100/50 font-bold border-y-2 border-blue-200">
                             <td colspan="${leftColsCount}" class="p-3 text-blue-900 bg-[#e8f1fc] text-right pr-4">${prefixName}${utils.esc(groupKey)} (${groupItems.length} รายการ)</td>
                             ${cols.col_bud ? `<td class="p-3 text-right text-blue-900 border-l border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gBud)}</td>` : ''}
-                            ${cols.col_po ? `<td class="p-3 text-right text-indigo-700 border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gPO)}</td>` : ''}
+                            ${cols.col_sign ? `<td class="p-3 text-right text-indigo-700 border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gSign)}</td>` : ''}
+                            ${cols.col_po ? `<td class="p-3 text-right text-amber-700 border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gPO)}</td>` : ''}
                             ${cols.col_dis ? `<td class="p-3 text-right text-emerald-700 border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gDis)}</td>` : ''}
-                            ${cols.col_rem ? `<td class="p-3 text-right text-orange-700 border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gRem)}</td>` : ''}
+                            ${cols.col_exp ? `<td class="p-3 text-right text-indigo-700 border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gExp)}</td>` : ''}
+                            ${cols.col_rem ? `<td class="p-3 text-right text-purple-700 border-r border-blue-200 bg-[#e8f1fc]">${utils.formatMoney(gRem)}</td>` : ''}
                             ${rightColsCount > 0 ? `<td colspan="${rightColsCount}"></td>` : ''}
                         </tr>`;
                         groupItems.forEach(p => { tbody += renderRow(p); });
@@ -1897,9 +1924,11 @@
 
                     let tfoot = `<tr><td colspan="${leftColsCount}" class="p-4 text-right text-slate-700 border-r border-slate-200 bg-slate-50">รวมทั้งสิ้น (ตามตัวกรอง):</td>`;
                     if (cols.col_bud) tfoot += `<td class="p-4 text-right text-slate-900 border-r border-slate-200 bg-slate-100">${utils.formatMoney(tBud)}</td>`;
-                    if (cols.col_po) tfoot += `<td class="p-4 text-right text-indigo-700 border-r border-slate-200 bg-slate-100">${utils.formatMoney(tPO)}</td>`;
+                    if (cols.col_sign) tfoot += `<td class="p-4 text-right text-indigo-700 border-r border-slate-200 bg-slate-100">${utils.formatMoney(tSign)}</td>`;
+                    if (cols.col_po) tfoot += `<td class="p-4 text-right text-amber-700 border-r border-slate-200 bg-amber-50/30">${utils.formatMoney(tPO)}</td>`;
                     if (cols.col_dis) tfoot += `<td class="p-4 text-right text-emerald-700 border-r border-slate-200 bg-slate-100">${utils.formatMoney(tDis)}</td>`;
-                    if (cols.col_rem) tfoot += `<td class="p-4 text-right text-orange-700 bg-orange-50 border-r border-slate-200">${utils.formatMoney(tRem)}</td>`;
+                    if (cols.col_exp) tfoot += `<td class="p-4 text-right text-indigo-700 border-r border-slate-200 bg-indigo-50/30">${utils.formatMoney(tExp)}</td>`;
+                    if (cols.col_rem) tfoot += `<td class="p-4 text-right text-purple-700 bg-purple-50 border-r border-slate-200">${utils.formatMoney(tRem)}</td>`;
                     if (rightColsCount > 0) tfoot += `<td colspan="${rightColsCount}"></td>`;
                     tfoot += `</tr>`;
 
@@ -1914,9 +1943,36 @@
                 const filtered = window.rawReportData.filter(p => { const matchYear = year === '' || String(p.fiscal_year) === year; const matchSearch = search === '' || (p.item_name || p.project_name || '').toLowerCase().includes(search) || (p.institution_name || '').toLowerCase().includes(search) || (p.budget_code || '').toLowerCase().includes(search) || (p.province || '').toLowerCase().includes(search) || (p.resp_person || '').toLowerCase().includes(search) || (p.resp_phone || '').toLowerCase().includes(search); const matchProv = province === '' || p.province === province; const matchBcode = bcode === '' || p.budget_code === bcode; const matchInst = inst === '' || p.institution_name === inst; const matchStatus = status === '' || String(p.current_status) === status; return matchYear && matchSearch && matchProv && matchBcode && matchInst && matchStatus; });
                 if (filtered.length === 0) return ui.toast('ไม่มีข้อมูลที่จะ Export', 'warning');
 
-                const dataToExport = filtered.map(p => ({
-                    'ปีงบฯ': p.fiscal_year || '-', 'ประเภท': p.item_type || '-', 'จังหวัด': p.province || '-', 'โครงการ': p.plan_type || '-', 'รหัสงบประมาณ': p.budget_code || '-', 'สถานศึกษา': p.institution_name || '-', 'รายการ': p.item_name || p.project_name || '-', 'สถานะ': `${p.current_status}. ${utils.getStatusName(p.current_status)}`, 'งบประมาณ': Number(p.budget_amount) || 0, 'ลงนามสัญญา': Number(p.po_amount) || 0, 'เบิกจ่ายแล้ว': Number(p.disbursed_amount) || 0, 'คงเหลือ': (Number(p.budget_amount) || 0) - (Number(p.disbursed_amount) || 0), 'เริ่มสัญญา': p.contract_signed_date ? new Date(p.contract_signed_date).toLocaleDateString('th-TH') : '-', 'สิ้นสุดสัญญา': p.contract_end_date ? new Date(p.contract_end_date).toLocaleDateString('th-TH') : '-', 'งวดงาน': p.installment_count ? p.installment_count + ' งวด' : '-', 'ปัญหาอุปสรรค': p.problem_detail || '-', 'ชื่อผู้รับผิดชอบ': p.resp_person || 'ยังไม่ระบุ', 'เบอร์โทรศัพท์': p.resp_phone || '-'
-                }));
+                const dataToExport = filtered.map(p => {
+                    const b = Number(p.budget_amount) || 0;
+                    const sign = Number(p.po_amount) || 0;
+                    const dis = Number(p.disbursed_amount) || 0;
+                    const po = sign > 0 ? Math.max(0, sign - dis) : 0;
+                    const exp = sign > 0 ? (po + dis) : 0;
+                    const rem = Math.max(0, b - exp);
+                    return {
+                        'ปีงบฯ': p.fiscal_year || '-',
+                        'ประเภท': p.item_type || '-',
+                        'จังหวัด': p.province || '-',
+                        'โครงการ': p.plan_type || '-',
+                        'รหัสงบประมาณ': p.budget_code || '-',
+                        'สถานศึกษา': p.institution_name || '-',
+                        'รายการ': p.item_name || p.project_name || '-',
+                        'สถานะ': `${p.current_status}. ${utils.getStatusName(p.current_status)}`,
+                        'งบประมาณ': b,
+                        'ลงนามสัญญา': sign,
+                        'PO': po,
+                        'เบิกจ่ายแล้ว': dis,
+                        'ผลการใช้จ่าย': exp,
+                        'งบประมาณคงเหลือ': rem,
+                        'เริ่มสัญญา': p.contract_signed_date ? new Date(p.contract_signed_date).toLocaleDateString('th-TH') : '-',
+                        'สิ้นสุดสัญญา': p.contract_end_date ? new Date(p.contract_end_date).toLocaleDateString('th-TH') : '-',
+                        'งวดงาน': p.installment_count ? p.installment_count + ' งวด' : '-',
+                        'ปัญหาอุปสรรค': p.problem_detail || '-',
+                        'ชื่อผู้รับผิดชอบ': p.resp_person || 'ยังไม่ระบุ',
+                        'เบอร์โทรศัพท์': p.resp_phone || '-'
+                    };
+                });
                 const ws = XLSX.utils.json_to_sheet(dataToExport); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "รายงานผล"); XLSX.writeFile(wb, `Report_STIPS_${Date.now()}.xlsx`);
             },
 
@@ -2200,6 +2256,9 @@
                     const bAmt = Number(p.budget_amount) || 0;
                     const poAmt = Number(p.po_amount) || 0;
                     const disAmt = Number(p.disbursed_amount) || 0;
+                    const poWaiting = poAmt > 0 ? Math.max(0, poAmt - disAmt) : 0;
+                    const expAmt = poAmt > 0 ? (poWaiting + disAmt) : 0;
+                    const remBud = Math.max(0, bAmt - expAmt);
                     const disPct = bAmt > 0 ? ((disAmt / bAmt) * 100).toFixed(1) : 0;
                     const itemName = p.item_name || p.project_name || '';
 
@@ -2213,9 +2272,12 @@
                                         <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-blue-100 text-blue-800">ปี ${p.fiscal_year || '-'}</span>
                                         <span class="text-xs text-slate-500 font-medium">📍 ${utils.esc(p.province || '-')}</span>
                                     </div>
-                                    <span class="px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-2xs whitespace-nowrap ${utils.getStatusColor(p.current_status)}">
-                                        สถานะปัจจุบัน: ${p.current_status}. ${utils.getStatusName(p.current_status)}
-                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        ${p.contract_end_date ? utils.getContractCountdownBadge(p.contract_end_date) : ''}
+                                        <span class="px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-2xs whitespace-nowrap ${utils.getStatusColor(p.current_status)}">
+                                            สถานะปัจจุบัน: ${p.current_status}. ${utils.getStatusName(p.current_status)}
+                                        </span>
+                                    </div>
                                 </div>
                                 <h3 class="text-base sm:text-lg font-bold text-slate-900 leading-snug">
                                     ${utils.esc(itemName)}
@@ -2227,22 +2289,30 @@
                                     ${p.item_type ? `<span class="text-slate-500">| ประเภท: ${utils.esc(p.item_type)}</span>` : ''}
                                 </p>
 
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-slate-200/80">
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-4 pt-3.5 border-t border-slate-200/80">
                                     <div class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-2xs">
                                         <span class="text-[11px] text-slate-500 font-medium block">💰 งบประมาณ</span>
                                         <span class="text-sm font-bold text-slate-800">${utils.formatMoney(bAmt)} ฿</span>
                                     </div>
                                     <div class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-2xs">
-                                        <span class="text-[11px] text-indigo-600 font-medium block">📑 ลงนามสัญญา</span>
+                                        <span class="text-[11px] text-indigo-600 font-medium block">✍️ ลงนามสัญญา</span>
                                         <span class="text-sm font-bold text-indigo-700">${utils.formatMoney(poAmt)} ฿</span>
+                                    </div>
+                                    <div class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-2xs">
+                                        <span class="text-[11px] text-amber-600 font-medium block">⏳ PO</span>
+                                        <span class="text-sm font-bold text-amber-700">${utils.formatMoney(poWaiting)} ฿</span>
                                     </div>
                                     <div class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-2xs">
                                         <span class="text-[11px] text-emerald-600 font-medium block">💳 เบิกจ่ายแล้ว (${disPct}%)</span>
                                         <span class="text-sm font-bold text-emerald-700">${utils.formatMoney(disAmt)} ฿</span>
                                     </div>
                                     <div class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-2xs">
-                                        <span class="text-[11px] text-slate-500 font-medium block">⏳ สิ้นสุดสัญญา</span>
-                                        <div class="mt-0.5">${utils.getContractCountdownBadge(p.contract_end_date)}</div>
+                                        <span class="text-[11px] text-blue-600 font-medium block">📈 ผลการใช้จ่าย</span>
+                                        <span class="text-sm font-bold text-blue-700">${utils.formatMoney(expAmt)} ฿</span>
+                                    </div>
+                                    <div class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-2xs">
+                                        <span class="text-[11px] text-purple-600 font-medium block">📊 งบประมาณคงเหลือ</span>
+                                        <span class="text-sm font-bold text-purple-700">${utils.formatMoney(remBud)} ฿</span>
                                     </div>
                                 </div>
                             </div>
