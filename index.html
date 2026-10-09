@@ -713,7 +713,7 @@
                                 <canvas id="filterStagesBarChart"></canvas>
                             </div>
                             <div class="overflow-x-auto max-h-[500px] rounded-xl border border-slate-200 shadow-sm custom-scrollbar">
-                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r min-w-[120px]">รหัสงบประมาณ</th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r">สถานศึกษา</th><th class="p-3 font-semibold border-r">ชื่อรายการ</th><th class="p-3 font-semibold text-center border-r min-w-[130px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-orange-50/50">คงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
+                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r min-w-[120px]">รหัสงบประมาณ</th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r">สถานศึกษา</th><th class="p-3 font-semibold border-r">ชื่อรายการ</th><th class="p-3 font-semibold text-center border-r min-w-[130px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="ผลต่างวงเงินลงนามสัญญา - เบิกจ่ายแล้ว">คงเหลือตามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="ผลต่างงบประมาณรวม - วงเงินลงนามสัญญา">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
                             </div>
                             <div class="flex justify-between items-center text-xs text-gray-500 pt-2"><span id="tableCount">แสดง 0 รายการ</span></div>
                         </section>`;
@@ -1200,26 +1200,28 @@
         const handlers = {
             // --- แดชบอร์ด (การ์ด & กราฟ & ฟิลเตอร์) ---
             renderDashSummaryCards: (data) => {
-                let tBud = 0, tPO = 0, tDis = 0, tWait = 0;
+                let tBud = 0, tPO = 0, tDis = 0;
                 (data || []).forEach(p => {
                     tBud += (Number(p.budget) || 0);
                     tPO += (Number(p.poAmount) || 0);
                     tDis += (Number(p.disbursed) || 0);
-                    if (p.statusNo < 7) tWait += (Number(p.budget) || 0);
                 });
 
+                const remPO = Math.max(0, tPO - tDis);
+                const remBud = Math.max(0, tBud - tPO);
+
                 const cards = [
-                    { t: 'งบประมาณรวม', amt: tBud, pct: 100, bg: 'bg-gradient-to-br from-blue-600 to-indigo-700', ic: '🏛️', count: (data || []).length },
-                    { t: 'ทำสัญญา PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '📝', count: (data || []).filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length },
-                    { t: 'เบิกจ่ายแล้ว', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', ic: '💸', count: (data || []).filter(i => Number(i.disbursed) > 0).length },
-                    { t: 'ผลการใช้จ่าย', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: (data || []).filter(i => Number(i.disbursed) > 0).length },
-                    { t: 'งบประมาณคงเหลือ', amt: tBud - tDis, pct: tBud ? (((tBud - tDis) / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: (data || []).filter(i => (Number(i.budget) || 0) - (Number(i.disbursed) || 0) > 0).length }
+                    { t: 'งบประมาณรวม', amt: tBud, pct: 100, bg: 'bg-gradient-to-br from-blue-600 to-indigo-700', ic: '🏛️', count: (data || []).length, tip: 'งบประมาณตาม พ.ร.บ. ทั้งหมด' },
+                    { t: 'ทำสัญญา PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '📝', count: (data || []).filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'วงเงินที่ลงนามสัญญาและก่อหนี้ผูกพันแล้ว' },
+                    { t: 'เบิกจ่ายแล้ว', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', ic: '💸', count: (data || []).filter(i => Number(i.disbursed) > 0).length, tip: 'ยอดเงินที่เบิกจ่ายตามงวดงานจริง' },
+                    { t: 'คงเหลือตามลงนามสัญญา', amt: remPO, pct: tBud ? ((remPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: (data || []).filter(i => (Number(i.poAmount) > 0 || i.statusNo >= 7) && ((Number(i.poAmount) || 0) - (Number(i.disbursed) || 0) > 0)).length, tip: 'ผลต่างวงเงินสัญญา - เบิกจ่ายแล้ว (เงินรอเบิกจ่ายตามงวดงาน)' },
+                    { t: 'งบประมาณคงเหลือ', amt: remBud, pct: tBud ? ((remBud / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: (data || []).filter(i => (Number(i.budget) || 0) - (Number(i.poAmount) || 0) > 0).length, tip: 'ผลต่างงบประมาณรวม - ลงนามสัญญา (เงินเหลือจ่ายและงบรอผูกพัน)' }
                 ];
 
                 let html = '';
                 cards.forEach(c => {
                     html += `
-                        <div class="${c.bg} p-4 rounded-2xl shadow-md text-white flex flex-col justify-between hover:-translate-y-1 transition duration-200 border border-white/10">
+                        <div class="${c.bg} p-4 rounded-2xl shadow-md text-white flex flex-col justify-between hover:-translate-y-1 transition duration-200 border border-white/10" title="${c.tip || c.t}">
                             <div class="flex justify-between items-start">
                                 <span class="text-[13px] font-bold text-white/90">${c.t}</span>
                                 <span class="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm">${c.ic}</span>
@@ -1312,18 +1314,21 @@
                 let tBud = 0, tPO = 0, tDis = 0;
                 filtered.forEach(i => { tBud += (Number(i.budget) || 0); tPO += (Number(i.poAmount) || 0); tDis += (Number(i.disbursed) || 0); });
 
+                const remPO = Math.max(0, tPO - tDis);
+                const remBud = Math.max(0, tBud - tPO);
+
                 const fCards = [
-                    { t: 'งบประมาณรวม', amt: tBud, pct: 100, bg: 'bg-gradient-to-br from-blue-600 to-indigo-700', ic: '💎', count: filtered.length },
-                    { t: 'ทำสัญญา PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '✍️', count: filtered.filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length },
-                    { t: 'เบิกจ่ายแล้ว', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', ic: '💵', count: filtered.filter(i => Number(i.disbursed) > 0).length },
-                    { t: 'ผลการใช้จ่าย', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: filtered.filter(i => Number(i.disbursed) > 0).length },
-                    { t: 'งบประมาณคงเหลือ', amt: tBud - tDis, pct: tBud ? (((tBud - tDis) / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: filtered.filter(i => (Number(i.budget) || 0) - (Number(i.disbursed) || 0) > 0).length }
+                    { t: 'งบประมาณรวม', amt: tBud, pct: 100, bg: 'bg-gradient-to-br from-blue-600 to-indigo-700', ic: '💎', count: filtered.length, tip: 'งบประมาณตาม พ.ร.บ. ทั้งหมด' },
+                    { t: 'ทำสัญญา PO', amt: tPO, pct: tBud ? ((tPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', ic: '✍️', count: filtered.filter(i => Number(i.poAmount) > 0 || i.statusNo >= 7).length, tip: 'วงเงินที่ลงนามสัญญาและก่อหนี้ผูกพันแล้ว' },
+                    { t: 'เบิกจ่ายแล้ว', amt: tDis, pct: tBud ? ((tDis / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', ic: '💵', count: filtered.filter(i => Number(i.disbursed) > 0).length, tip: 'ยอดเงินที่เบิกจ่ายตามงวดงานจริง' },
+                    { t: 'คงเหลือตามลงนามสัญญา', amt: remPO, pct: tBud ? ((remPO / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', ic: '⏳', count: filtered.filter(i => (Number(i.poAmount) > 0 || i.statusNo >= 7) && ((Number(i.poAmount) || 0) - (Number(i.disbursed) || 0) > 0)).length, tip: 'ผลต่างวงเงินสัญญา - เบิกจ่ายแล้ว (เงินรอเบิกจ่ายตามงวดงาน)' },
+                    { t: 'งบประมาณคงเหลือ', amt: remBud, pct: tBud ? ((remBud / tBud) * 100) : 0, bg: 'bg-gradient-to-br from-purple-600 to-pink-600', ic: '📊', count: filtered.filter(i => (Number(i.budget) || 0) - (Number(i.poAmount) || 0) > 0).length, tip: 'ผลต่างงบประมาณรวม - ลงนามสัญญา (เงินเหลือจ่ายและงบรอผูกพัน)' }
                 ];
 
                 let fHtml = '';
                 fCards.forEach(c => {
                     fHtml += `
-                        <div class="${c.bg} p-4 rounded-2xl shadow-md text-white flex flex-col justify-between hover:-translate-y-1 transition duration-200 border border-white/10">
+                        <div class="${c.bg} p-4 rounded-2xl shadow-md text-white flex flex-col justify-between hover:-translate-y-1 transition duration-200 border border-white/10" title="${c.tip || c.t}">
                             <div class="flex justify-between items-start">
                                 <span class="text-[13px] font-bold text-white/90">${c.t}</span>
                                 <span class="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm shadow-sm">${c.ic}</span>
@@ -1353,7 +1358,8 @@
                         <td class="p-3 text-right font-bold text-slate-800 border-r border-slate-100">${utils.formatMoney(r.budget)}</td>
                         <td class="p-3 text-right font-medium text-indigo-600 border-r border-slate-100">${utils.formatMoney(r.poAmount)}</td>
                         <td class="p-3 text-right font-medium text-emerald-600 border-r border-slate-100">${utils.formatMoney(r.disbursed)}</td>
-                        <td class="p-3 text-right font-bold text-orange-600 bg-orange-50/30 border-r border-slate-100">${utils.formatMoney(r.budget - r.disbursed)}</td>
+                        <td class="p-3 text-right font-semibold text-amber-600 bg-amber-50/20 border-r border-slate-100">${r.poAmount > 0 ? utils.formatMoney(Math.max(0, r.poAmount - r.disbursed)) : '-'}</td>
+                        <td class="p-3 text-right font-bold text-purple-600 bg-purple-50/20 border-r border-slate-100">${utils.formatMoney(Math.max(0, r.budget - (r.poAmount || 0)))}</td>
                         <td class="p-3 text-center text-slate-500 border-r border-slate-100">${utils.formatDateOnly(r.contractSignedDate)}</td>
                         <td class="p-3 text-center border-r border-slate-100">${utils.getContractCountdownBadge(r.contractEndDate)}</td>
                         <td class="p-3 text-center font-bold text-blue-600">${r.installmentCount ? r.installmentCount + ' งวด' : '-'}</td>
@@ -1403,7 +1409,7 @@
                     });
                 }
 
-                if (document.getElementById('dashTableBody')) document.getElementById('dashTableBody').innerHTML = html || `<tr><td colspan="13" class="p-8 text-center text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
+                if (document.getElementById('dashTableBody')) document.getElementById('dashTableBody').innerHTML = html || `<tr><td colspan="14" class="p-8 text-center text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
                 if (document.getElementById('tableCount')) document.getElementById('tableCount').innerText = `แสดง ${Math.min(filtered.length, 100)} จาก ${filtered.length} รายการ`;
 
                 // Pie charts removed
