@@ -116,6 +116,52 @@
             padding-top: 1rem !important;
             padding-bottom: 1rem !important;
         }
+
+        :root {
+            --dash-col-bcode-w: 150px;
+            --dash-col-inst-w: 190px;
+            --dash-col-item-w: 280px;
+            --rep-col-bcode-w: 150px;
+            --rep-col-inst-w: 190px;
+            --rep-col-item-w: 280px;
+        }
+
+        .col-resizer {
+            position: absolute;
+            top: 0;
+            right: -5px;
+            bottom: 0;
+            width: 12px;
+            cursor: col-resize;
+            user-select: none;
+            touch-action: none;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .col-resizer::after {
+            content: '';
+            display: block;
+            width: 3px;
+            height: 50%;
+            border-radius: 9999px;
+            background-color: #cbd5e1;
+            transition: background-color 0.15s, height 0.15s, width 0.15s;
+        }
+
+        .col-resizer:hover::after,
+        .col-resizer.is-resizing::after {
+            background-color: #2563eb;
+            height: 85%;
+            width: 4px;
+        }
+
+        body.resizing-col {
+            cursor: col-resize !important;
+            user-select: none !important;
+        }
     </style>
 </head>
 
@@ -181,6 +227,11 @@
                         <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         ประวัติการใช้งาน
                     </button>
+                    <button id="nav-announcement" onclick="app.navigate('announcement')" data-nav="announcement"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl hover:bg-slate-100 text-left font-medium transition-colors">
+                        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                        จัดการข่าวประกาศ
+                    </button>
                 </div>
             </nav>
             <div class="p-4 border-t border-slate-100 bg-slate-50/50">
@@ -225,7 +276,7 @@
                     <h2
                         class="text-2xl sm:text-3xl font-bold mb-2 flex items-center justify-center lg:justify-start gap-3 drop-shadow-md">
                         🏆 BPP Monitor Leaderboard</h2>
-                    <p class="text-sm text-blue-200">100 อันดับวิทยาลัยที่มีผลการใช้จ่ายงบลงทุนยอดเยี่ยม</p>
+                    <p class="text-sm text-blue-200">100 อันดับวิทยาลัยที่มีผลการเบิกจ่ายงบประมาณเทียบสัญญาเฉลี่ยยอดเยี่ยม</p>
                 </div>
                 <div
                     class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col flex-1 min-h-0">
@@ -331,6 +382,63 @@
                     class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 transition-colors">&times;</button>
             </div>
             <div id="modal-content" class="p-5 sm:p-6 overflow-y-auto no-scrollbar"></div>
+        </div>
+    </div>
+
+    <!-- LOGIN ANNOUNCEMENT MODAL (ENLARGED 2X) -->
+    <div id="login-announcement-modal"
+        class="fixed inset-0 bg-slate-950/70 z-[9990] hidden items-center justify-center p-3 sm:p-6 backdrop-blur-md transition-all duration-300">
+        <div class="bg-white rounded-3xl w-full max-w-4xl lg:max-w-5xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 scale-95 transition-all duration-300"
+            id="login-announcement-box">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-6 sm:px-8 py-4 sm:py-5 flex items-center justify-between shrink-0 shadow-md">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl shadow-inner shrink-0">
+                        📢
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-blue-200 bg-white/10 px-2.5 py-0.5 rounded-md inline-block">ข่าวสารและประกาศ</span>
+                        <h3 id="ann-modal-title" class="text-lg sm:text-2xl font-bold text-white leading-tight mt-0.5"></h3>
+                    </div>
+                </div>
+                <button onclick="handlers.closeLoginAnnouncement()"
+                    class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors text-2xl font-light"
+                    title="ปิดหน้าต่าง">&times;</button>
+            </div>
+            
+            <!-- Body -->
+            <div class="p-6 sm:p-8 overflow-y-auto custom-scrollbar flex-1 space-y-5">
+                <div class="flex items-center gap-2 text-xs sm:text-sm text-slate-400 font-medium">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span id="ann-modal-date"></span>
+                </div>
+
+                <!-- Optional Image (Enlarged 2x, responsive, object-contain) -->
+                <div id="ann-modal-img-container" class="hidden relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-900/5 p-2 sm:p-3 flex items-center justify-center">
+                    <img id="ann-modal-img" src="" alt="Announcement"
+                        class="w-auto max-w-full max-h-[640px] md:max-h-[720px] object-contain rounded-xl shadow-sm cursor-zoom-in transition-transform duration-200 hover:scale-[1.01]"
+                        onclick="window.open(this.src, '_blank')" title="คลิกเพื่อดูรูปภาพขนาดเต็ม">
+                    <div class="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-md text-white text-xs font-medium px-3 py-1.5 rounded-lg pointer-events-none opacity-80 group-hover:opacity-100 transition shadow-md flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                        <span>คลิกเพื่อดูรูปขนาดเต็ม</span>
+                    </div>
+                </div>
+
+                <!-- Text Content -->
+                <div id="ann-modal-content" class="text-slate-700 text-base sm:text-lg leading-relaxed whitespace-pre-line font-sarabun"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-slate-50 px-6 sm:px-8 py-4 sm:py-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                <label class="flex items-center gap-2 text-xs sm:text-sm text-slate-600 cursor-pointer select-none">
+                    <input type="checkbox" id="ann-hide-today-chk" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 accent-blue-600">
+                    <span>ไม่ต้องแสดงอีกในวันนี้</span>
+                </label>
+                <button onclick="handlers.closeLoginAnnouncement()"
+                    class="w-full sm:w-auto px-7 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 text-sm sm:text-base transition-all flex items-center justify-center gap-2">
+                    <span>✓</span> รับทราบ / ปิดหน้าต่าง
+                </button>
+            </div>
         </div>
     </div>
 
@@ -454,7 +562,7 @@
                 }
                 if (L.description && (state.items || []).length > 0) {
                     for (let it of state.items) {
-                        const code = it.budget_code || it.item_code || it.project_code;
+                        const code = it.budget_code || it.budget_code2 || it.item_code || it.project_code;
                         if (code && L.description.includes(code)) {
                             return it.item_name || it.project_name;
                         }
@@ -611,7 +719,74 @@
                 }, 300);
             },
             openSidebar: () => { document.getElementById('sidebar').classList.remove('-translate-x-full'); document.getElementById('sidebar-overlay').classList.remove('hidden'); },
-            closeSidebar: () => { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar-overlay').classList.add('hidden'); }
+            closeSidebar: () => { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar-overlay').classList.add('hidden'); },
+            initColResize: (e, varName, minW = 80, maxW = 800) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const isTouch = !!e.touches;
+                const startX = isTouch ? e.touches[0].clientX : e.clientX;
+                const resizerEl = e.currentTarget;
+                const thEl = resizerEl.closest('th');
+                const startWidth = thEl ? Math.round(thEl.getBoundingClientRect().width) : (parseInt(getComputedStyle(document.documentElement).getPropertyValue(varName)) || 150);
+
+                resizerEl.classList.add('is-resizing');
+                document.body.classList.add('resizing-col');
+
+                const onMove = (moveEvt) => {
+                    const currentX = moveEvt.touches ? moveEvt.touches[0].clientX : moveEvt.clientX;
+                    const delta = currentX - startX;
+                    const newW = Math.max(minW, Math.min(maxW, Math.round(startWidth + delta)));
+                    document.documentElement.style.setProperty(varName, `${newW}px`);
+                };
+
+                const onEnd = () => {
+                    resizerEl.classList.remove('is-resizing');
+                    document.body.classList.remove('resizing-col');
+                    window.removeEventListener('mousemove', onMove);
+                    window.removeEventListener('mouseup', onEnd);
+                    window.removeEventListener('touchmove', onMove);
+                    window.removeEventListener('touchend', onEnd);
+                    window.removeEventListener('touchcancel', onEnd);
+
+                    const finalW = document.documentElement.style.getPropertyValue(varName);
+                    if (finalW) {
+                        try { localStorage.setItem('bpp_col_' + varName, finalW.trim()); } catch (_) {}
+                    }
+                };
+
+                if (isTouch) {
+                    window.addEventListener('touchmove', onMove, { passive: false });
+                    window.addEventListener('touchend', onEnd);
+                    window.addEventListener('touchcancel', onEnd);
+                } else {
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onEnd);
+                }
+            },
+            resetColWidth: (e, varName, defaultW = 160) => {
+                if (e) { e.preventDefault(); e.stopPropagation(); }
+                document.documentElement.style.setProperty(varName, `${defaultW}px`);
+                try { localStorage.removeItem('bpp_col_' + varName); } catch (_) {}
+                ui.toast('คืนค่าความกว้างคอลัมน์เรียบร้อย', 'info');
+            },
+            loadSavedColWidths: () => {
+                const colVars = [
+                    '--dash-col-bcode-w',
+                    '--dash-col-inst-w',
+                    '--dash-col-item-w',
+                    '--rep-col-bcode-w',
+                    '--rep-col-inst-w',
+                    '--rep-col-item-w'
+                ];
+                colVars.forEach(v => {
+                    try {
+                        const saved = localStorage.getItem('bpp_col_' + v);
+                        if (saved) {
+                            document.documentElement.style.setProperty(v, saved);
+                        }
+                    } catch (_) {}
+                });
+            }
         };
 
         async function rpc(fn, params = {}) {
@@ -642,7 +817,7 @@
                     try { if (state.sessionToken) { logger('LOGOUT', 'ออกจากระบบ'); await rpc("custom_logout", { p_session_token: state.sessionToken }); } } catch (e) { }
                     storage.remove("stips_session_token"); state.sessionToken = null; state.user = null;
                     document.getElementById('app-root').classList.add('hidden'); document.getElementById('login-root').classList.remove('hidden');
-                    ui.hideLoader(); ui.toast('ออกจากระบบแล้ว'); handlers.loadLoginUsers(); handlers.loadLeaderboard();
+                    ui.hideLoader(); ui.toast('ออกจากระบบแล้ว'); handlers.loadLoginUsers(); handlers.loadLeaderboard(); handlers.loadLoginAnnouncement();
                 });
             },
             validate: async () => {
@@ -677,7 +852,7 @@
                                 id: p.id, no: index + 1, sourceSheet: iType, type: iType, institution: p.institution_name || '',
                                 item: iName, budget: p.budget_amount || 0, poAmount: Number(p.po_amount) || 0, disbursed: Number(p.disbursed_amount) || 0,
                                 percent: p.budget_amount > 0 ? (Number(p.disbursed_amount) / p.budget_amount * 100) : 0, status: utils.getStatusName(statNo), statusNo: statNo,
-                                budgetCode: p.budget_code || '', year: p.fiscal_year || 'ไม่ระบุ',
+                                budgetCode: p.budget_code || '', budgetCode2: p.budget_code2 || '', year: p.fiscal_year || 'ไม่ระบุ',
                                 contractSignedDate: p.contract_signed_date, contractEndDate: p.contract_end_date, installmentCount: p.installment_count
                             };
                         });
@@ -713,7 +888,7 @@
                                 <canvas id="filterStagesBarChart"></canvas>
                             </div>
                             <div class="overflow-x-auto max-h-[500px] rounded-xl border border-slate-200 shadow-sm custom-scrollbar">
-                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r min-w-[120px]">รหัสงบประมาณ</th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r">สถานศึกษา</th><th class="p-3 font-semibold border-r">ชื่อรายการ</th><th class="p-3 font-semibold text-center border-r min-w-[130px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
+                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);"><div class="truncate pr-2">รหัสโครงการ e-GP</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--dash-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);"><div class="truncate pr-2">สถานศึกษา</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ontouchstart="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ondblclick="ui.resetColWidth(event, '--dash-col-inst-w', 190)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);"><div class="truncate pr-2">ชื่อรายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--dash-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold text-center border-r min-w-[130px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
                             </div>
                             <div class="flex justify-between items-center text-xs text-gray-500 pt-2"><span id="tableCount">แสดง 0 รายการ</span></div>
                         </section>`;
@@ -730,6 +905,23 @@
                         const repRes = await rpc("custom_get_report_data", { p_session_token: state.sessionToken });
                         if (repRes && repRes.success && Array.isArray(repRes.data) && repRes.data.length > 0) {
                             items = repRes.data;
+                            // ตรวจสอบและดึง plan_type หากฟังก์ชัน RPC เดิมในฐานข้อมูลยังไม่ได้ส่งมา
+                            if (items.length > 0 && items[0].plan_type === undefined) {
+                                try {
+                                    const { data: pTypes } = await supabaseClient.from('items').select('id, plan_type, output_type');
+                                    if (pTypes && pTypes.length > 0) {
+                                        const pTypeMap = {};
+                                        pTypes.forEach(x => { pTypeMap[x.id] = x; });
+                                        items.forEach(it => {
+                                            const found = pTypeMap[it.id];
+                                            if (found) {
+                                                it.plan_type = found.plan_type || '';
+                                                it.output_type = found.output_type || '';
+                                            }
+                                        });
+                                    }
+                                } catch (_) { }
+                            }
                         }
                     } catch (errRpc) {
                         console.warn("custom_get_report_data fallback:", errRpc);
@@ -760,6 +952,8 @@
                             const u = userMap[(p.institution_name || '').trim()] || {};
                             return {
                                 ...p,
+                                plan_type: p.plan_type || '',
+                                output_type: p.output_type || '',
                                 po_amount: c.signed_amount || p.po_amount || 0,
                                 contract_signed_date: c.contract_signed_date || '',
                                 contract_end_date: c.contract_end_date || '',
@@ -780,6 +974,8 @@
                         const iName = p.item_name || p.project_name || '';
                         return {
                             ...p,
+                            plan_type: p.plan_type || '',
+                            output_type: p.output_type || '',
                             item_name: iName,
                             project_name: iName,
                             contract_signed_date: p.contract_signed_date || '',
@@ -927,7 +1123,7 @@
                     state.selectedItem = p; const curStat = parseInt(p.current_status, 10) || 1; const parseJSON = (str) => { try { return JSON.parse(str); } catch (e) { return null; } };
 
                     const itemName = p.item_name || p.project_name || '';
-                    let html = `<div class="mb-6"><button onclick="app.navigate('items')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้ารายการ</button><h2 class="text-2xl font-bold text-slate-800">สถานะการรายงานผล (ติดตามขั้นตอนรายการ)</h2><div class="mt-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-slate-800 text-sm font-medium">${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded text-indigo-800 font-bold">${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัสงบฯ</span>`} ${utils.esc(itemName)}</p></div></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2"><div class="bg-white rounded-3xl border border-slate-100 p-5 sm:p-8 mb-6 shadow-sm"><div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 border-b border-slate-100 pb-5"><h3 class="font-bold text-lg text-slate-800">ความก้าวหน้าดำเนินงาน(อยู่ขั้นตอน)</h3><span class="px-4 py-1.5 text-xs rounded-full border ${utils.getStatusColor(curStat)} font-bold shadow-sm">ปัจจุบัน: สถานะ ${curStat}</span></div><div class="space-y-2">`;
+                    let html = `<div class="mb-6"><button onclick="app.navigate('items')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้ารายการ</button><h2 class="text-2xl font-bold text-slate-800">สถานะการรายงานผล (ติดตามขั้นตอนรายการ)</h2><div class="mt-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-slate-800 text-sm font-medium flex flex-wrap items-center gap-2">${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded text-indigo-800 font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัส e-GP</span>`}${p.budget_code2 ? `<span class="font-mono bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded text-blue-700 font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''} <span>${utils.esc(itemName)}</span></p></div></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2"><div class="bg-white rounded-3xl border border-slate-100 p-5 sm:p-8 mb-6 shadow-sm"><div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 border-b border-slate-100 pb-5"><h3 class="font-bold text-lg text-slate-800">ความก้าวหน้าดำเนินงาน(อยู่ขั้นตอน)</h3><span class="px-4 py-1.5 text-xs rounded-full border ${utils.getStatusColor(curStat)} font-bold shadow-sm">ปัจจุบัน: สถานะ ${curStat}</span></div><div class="space-y-2">`;
 
                     for (let i = 1; i <= 8; i++) {
                         const isDone = curStat > i; const isCur = curStat === i; const isWait = curStat < i;
@@ -1192,12 +1388,393 @@
                     if (!res.success) throw new Error(res.message);
                     const insts = res.installments || []; const progs = res.progress || []; let totalAmt = 0, totalPaid = 0, totalPile = 0;
                     let instRows = insts.map(i => { const d = i.disbursement || {}; const pAmt = Number(d.paid_amount || 0); const pPile = Number(d.pile_return_amount || 0); totalAmt += Number(i.installment_amount); totalPaid += pAmt; totalPile += pPile; return `<tr class="hover:bg-blue-50/50 transition-colors"><td class="px-4 py-3 border-b text-center text-xs font-bold text-slate-500">งวด ${i.installment_no}</td><td class="px-4 py-3 border-b text-right text-sm font-semibold text-slate-800">${utils.formatMoney(i.installment_amount)}</td><td class="px-4 py-3 border-b"><input type="number" id="paid_${i.id}" value="${d.paid_amount || ''}" max="${i.installment_amount}" oninput="handlers.calcDisburseRow('${i.id}', ${i.installment_amount})" class="w-full min-w-[100px] border border-slate-300 p-2 rounded-lg outline-none text-right text-sm focus:ring-2 focus:ring-primary font-medium text-blue-700" placeholder="0.00"></td><td class="px-4 py-3 border-b text-right text-sm font-bold text-orange-600" id="pile_${i.id}">${utils.formatMoney(pPile)}</td><td class="px-4 py-3 border-b"><input type="date" id="date_${i.id}" value="${d.payment_date || ''}" class="w-full border border-slate-300 p-2 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary text-slate-600"></td><td class="px-4 py-3 border-b"><input type="text" id="det_${i.id}" value="${utils.esc(d.payment_detail || '')}" placeholder="คำอธิบาย..." class="w-full min-w-[140px] border border-slate-300 p-2 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary"></td><td class="px-4 py-3 border-b text-center"><button onclick="handlers.saveDisburse('${i.id}')" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-blue-700 shadow-sm transition">บันทึก</button></td></tr>`; }).join('');
-                    let html = `<div class="mb-6"><button onclick="app.navigate('workflow', '${itemId}')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้า Workflow</button><h2 class="text-2xl font-bold text-slate-800">บริหารสัญญาและการเบิกจ่าย</h2><p class="text-slate-500 mt-1 text-sm"> ${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded text-indigo-800 font-bold">${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัสงบฯ</span>`}  ${utils.esc(p.item_name || p.project_name)}</p></div><div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-6"><div class="p-5 border-b border-slate-100 bg-slate-50"><h3 class="font-bold text-slate-800 text-lg">1. ตารางติดตามการเบิกจ่ายจริงตามงวดงาน</h3></div><div class="overflow-x-auto p-1"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-slate-100/50 text-slate-500 text-xs uppercase tracking-wider"><tr><th class="px-4 py-3 text-center">งวดงาน</th><th class="px-4 py-3 text-right">ราคางวดงาน</th><th class="px-4 py-3">ยอดเบิกจ่ายแล้ว (บาท)</th><th class="px-4 py-3 text-right">คืนค่าเสาเข็ม/ค่างาน</th><th class="px-4 py-3">วันที่เบิกจ่าย</th><th class="px-4 py-3">รายละเอียด</th><th class="px-4 py-3 text-center">จัดการ</th></tr></thead><tbody>${instRows}</tbody><tfoot class="bg-slate-50/80 font-bold text-sm border-t-2 border-slate-200"><tr><td class="px-4 py-4 text-center">สรุปรวม</td><td class="px-4 py-4 text-right text-slate-800 text-base">${utils.formatMoney(totalAmt)}</td><td class="px-4 py-4 text-right text-emerald-600 text-base" id="total_paid">${utils.formatMoney(totalPaid)}</td><td class="px-4 py-4 text-right text-orange-600 text-base" id="total_pile">${utils.formatMoney(totalPile)}</td><td colspan="3"></td></tr></tfoot></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 h-fit"><h3 class="font-bold text-slate-800 text-lg mb-5 pb-3 border-b border-slate-100">2. บันทึกปัญหา / อุปสรรค</h3><div class="space-y-4"><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">ปัญหา / อุปสรรค</label><textarea id="prog_prob" rows="4" placeholder="ระบุปัญหาอุปสรรค (ถ้ามี) หรือเว้นว่างไว้" class="w-full border border-slate-300 rounded-xl p-3 outline-none text-sm focus:ring-2 focus:ring-red-400 transition"></textarea></div><button onclick="handlers.saveProgress('${res.contract.id}')" class="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-slate-800 mt-2 shadow-md transition">บันทึกรายงาน</button></div></div><div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 h-fit"><h3 class="font-bold text-slate-800 text-lg mb-5 pb-3 border-b border-slate-100 flex items-center gap-2"><span class="text-xl">⏱️</span> ประวัติรายงาน</h3><div class="space-y-5 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">${progs.length === 0 ? '<div class="text-center py-10 bg-slate-50 rounded-xl border border-dashed"><p class="text-sm text-slate-400 font-medium">ยังไม่มีประวัติการบันทึก</p></div>' : progs.map(pr => `<div class="relative pl-5 before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-[-20px] before:w-[3px] before:bg-blue-100 last:before:hidden"><div class="absolute left-[-2px] top-1.5 w-[7px] h-[7px] rounded-full bg-primary ring-4 ring-white"></div><div class="bg-slate-50 border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition"><p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between"><span>${utils.formatDate(pr.created_at)}</span><span class="text-primary">${utils.esc(pr.creator_name)}</span></p>${pr.problem_detail ? `<div class="mt-1 p-2.5 bg-red-50 border border-red-100 rounded-lg"><p class="text-xs font-semibold text-red-700 mb-0.5">⚠️ ปัญหาอุปสรรค:</p><p class="text-xs text-red-600">${utils.esc(pr.problem_detail)}</p></div>` : '<p class="text-sm text-slate-500 italic">อัปเดตสถานะล่าสุด (ไม่มีปัญหา)</p>'}</div></div>`).join('')}</div></div></div>`; document.getElementById('page-container').innerHTML = html;
+                    let html = `<div class="mb-6"><button onclick="app.navigate('workflow', '${itemId}')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้า Workflow</button><h2 class="text-2xl font-bold text-slate-800">บริหารสัญญาและการเบิกจ่าย</h2><p class="text-slate-500 mt-1 text-sm flex flex-wrap items-center gap-2"> ${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded text-indigo-800 font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัส e-GP</span>`} ${p.budget_code2 ? `<span class="font-mono bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded text-blue-700 font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''} <span>${utils.esc(p.item_name || p.project_name)}</span></p></div><div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-6"><div class="p-5 border-b border-slate-100 bg-slate-50"><h3 class="font-bold text-slate-800 text-lg">1. ตารางติดตามการเบิกจ่ายจริงตามงวดงาน</h3></div><div class="overflow-x-auto p-1"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-slate-100/50 text-slate-500 text-xs uppercase tracking-wider"><tr><th class="px-4 py-3 text-center">งวดงาน</th><th class="px-4 py-3 text-right">ราคางวดงาน</th><th class="px-4 py-3">ยอดเบิกจ่ายแล้ว (บาท)</th><th class="px-4 py-3 text-right">คืนค่าเสาเข็ม/ค่างาน</th><th class="px-4 py-3">วันที่เบิกจ่าย</th><th class="px-4 py-3">รายละเอียด</th><th class="px-4 py-3 text-center">จัดการ</th></tr></thead><tbody>${instRows}</tbody><tfoot class="bg-slate-50/80 font-bold text-sm border-t-2 border-slate-200"><tr><td class="px-4 py-4 text-center">สรุปรวม</td><td class="px-4 py-4 text-right text-slate-800 text-base">${utils.formatMoney(totalAmt)}</td><td class="px-4 py-4 text-right text-emerald-600 text-base" id="total_paid">${utils.formatMoney(totalPaid)}</td><td class="px-4 py-4 text-right text-orange-600 text-base" id="total_pile">${utils.formatMoney(totalPile)}</td><td colspan="3"></td></tr></tfoot></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 h-fit"><h3 class="font-bold text-slate-800 text-lg mb-5 pb-3 border-b border-slate-100">2. บันทึกปัญหา / อุปสรรค</h3><div class="space-y-4"><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">ปัญหา / อุปสรรค</label><textarea id="prog_prob" rows="4" placeholder="ระบุปัญหาอุปสรรค (ถ้ามี) หรือเว้นว่างไว้" class="w-full border border-slate-300 rounded-xl p-3 outline-none text-sm focus:ring-2 focus:ring-red-400 transition"></textarea></div><button onclick="handlers.saveProgress('${res.contract.id}')" class="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-slate-800 mt-2 shadow-md transition">บันทึกรายงาน</button></div></div><div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 h-fit"><h3 class="font-bold text-slate-800 text-lg mb-5 pb-3 border-b border-slate-100 flex items-center gap-2"><span class="text-xl">⏱️</span> ประวัติรายงาน</h3><div class="space-y-5 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">${progs.length === 0 ? '<div class="text-center py-10 bg-slate-50 rounded-xl border border-dashed"><p class="text-sm text-slate-400 font-medium">ยังไม่มีประวัติการบันทึก</p></div>' : progs.map(pr => `<div class="relative pl-5 before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-[-20px] before:w-[3px] before:bg-blue-100 last:before:hidden"><div class="absolute left-[-2px] top-1.5 w-[7px] h-[7px] rounded-full bg-primary ring-4 ring-white"></div><div class="bg-slate-50 border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition"><p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between"><span>${utils.formatDate(pr.created_at)}</span><span class="text-primary">${utils.esc(pr.creator_name)}</span></p>${pr.problem_detail ? `<div class="mt-1 p-2.5 bg-red-50 border border-red-100 rounded-lg"><p class="text-xs font-semibold text-red-700 mb-0.5">⚠️ ปัญหาอุปสรรค:</p><p class="text-xs text-red-600">${utils.esc(pr.problem_detail)}</p></div>` : '<p class="text-sm text-slate-500 italic">อัปเดตสถานะล่าสุด (ไม่มีปัญหา)</p>'}</div></div>`).join('')}</div></div></div>`; document.getElementById('page-container').innerHTML = html;
                 } catch (e) { ui.toast(e.message, 'error'); } finally { ui.hideLoader(); }
+            },
+
+            announcement: async () => {
+                if (state.user.role !== 'admin') {
+                    document.getElementById('page-container').innerHTML = `<div class="p-10 text-center text-red-500 font-bold text-2xl mt-10">🔒 ไม่มีสิทธิ์เข้าถึงหน้านี้</div>`;
+                    return;
+                }
+                ui.showLoader('กำลังโหลดข้อมูลข่าวประกาศ...');
+                try {
+                    let ann = { title: '', content: '', image_url: '', is_active: true };
+                    try {
+                        const { data, error } = await supabaseClient.from('system_announcements').select('*').order('updated_at', { ascending: false }).limit(1);
+                        if (!error && data && data.length > 0) ann = data[0];
+                    } catch (_) {}
+
+                    if (!ann.title) {
+                        try {
+                            const fb = localStorage.getItem('bpp_fallback_announcement');
+                            if (fb) ann = JSON.parse(fb);
+                        } catch (_) {}
+                    }
+
+                    window._currentAnnounceImage = ann.image_url || '';
+
+                    let html = `
+                        <div class="mb-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                    <span>📢</span> จัดการข่าวประกาศ (Pop-up หน้า Login)
+                                </h2>
+                                <p class="text-sm text-slate-500 mt-1">กำหนดข้อความและรูปภาพที่จะแสดงเป็นหน้าต่าง Pop-up ให้ผู้ใช้งานเห็นเมื่อเปิดหน้าระบบ</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="handlers.previewAnnouncement()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2.5 rounded-xl border border-indigo-200 transition text-sm flex items-center gap-1.5 shadow-2xs">
+                                    <span>👁️</span> ดูตัวอย่าง Pop-up
+                                </button>
+                                <button onclick="handlers.saveAnnouncement()" class="bg-primary hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm flex items-center gap-1.5 shadow-md shadow-blue-500/20">
+                                    <span>💾</span> บันทึกและเผยแพร่
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Left 2 Cols: Form -->
+                            <div class="lg:col-span-2 space-y-6">
+                                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+                                    <!-- Active Toggle -->
+                                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                                        <div>
+                                            <label for="ann_is_active" class="font-bold text-slate-800 text-sm block cursor-pointer">สถานะการแสดงผลประกาศ</label>
+                                            <p class="text-xs text-slate-500 mt-0.5">เปิดเพื่อให้ Pop-up เด้งแสดงที่หน้า Login หรือปิดเมื่อยังไม่ต้องการเผยแพร่</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="ann_is_active" ${ann.is_active ? 'checked' : ''} class="sr-only peer" onchange="handlers.updateAnnounceStatusBadge(this.checked)">
+                                            <div class="w-14 h-8 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                                        </label>
+                                    </div>
+                                    <div id="ann_status_indicator" class="text-xs font-bold px-3 py-1.5 rounded-xl w-fit flex items-center gap-1.5 ${ann.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}">
+                                        <span>${ann.is_active ? '🟢 กำลังเปิดแสดงผลในหน้า Login' : '⚪ ปิดการแสดงผล (ไม่แสดง)'}</span>
+                                    </div>
+
+                                    <!-- Title -->
+                                    <div>
+                                        <label class="block text-sm font-bold text-slate-700 mb-1.5">📌 หัวข้อประกาศ <span class="text-red-500">*</span></label>
+                                        <input type="text" id="ann_title" value="${utils.esc(ann.title || '')}" placeholder="เช่น แจ้งกำหนดการรายงานผลประจำงวด หรือ แจ้งปิดปรับปรุงระบบ..." class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary text-sm font-semibold text-slate-800 transition">
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div>
+                                        <label class="block text-sm font-bold text-slate-700 mb-1.5">📝 ข้อความและรายละเอียดข่าวสาร</label>
+                                        <textarea id="ann_content" rows="6" placeholder="พิมพ์ข้อความที่ต้องการแจ้งเตือนผู้ใช้งาน... (สามารถเว้นบรรทัดหรือใส่ย่อหน้าได้ตามต้องการ)" class="w-full p-4 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary text-sm font-medium text-slate-700 transition leading-relaxed">${utils.esc(ann.content || '')}</textarea>
+                                    </div>
+
+                                    <!-- Image Section -->
+                                    <div class="border-t border-slate-100 pt-5 space-y-4">
+                                        <label class="block text-sm font-bold text-slate-700">🖼️ รูปภาพประกอบ (แนบได้ 1 รูป)</label>
+                                        
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <label class="flex flex-col items-center justify-center p-4 border-2 border-dashed border-blue-200 hover:border-blue-400 bg-blue-50/30 hover:bg-blue-50/60 rounded-2xl cursor-pointer transition text-center group">
+                                                <svg class="w-8 h-8 text-blue-500 mb-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                <span class="text-xs font-bold text-blue-700">📁 เลือกรูปจากเครื่อง</span>
+                                                <span class="text-[10px] text-slate-500 mt-0.5">ระบบจะบีบอัดรูปให้อัตโนมัติ</span>
+                                                <input type="file" id="ann_file_input" accept="image/*" class="hidden" onchange="handlers.handleAnnounceImageSelect(event)">
+                                            </label>
+
+                                            <div class="flex flex-col justify-center p-3 border border-slate-200 rounded-2xl bg-slate-50/50 space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600">🔗 หรือวาง URL รูปภาพโดยตรง:</label>
+                                                <input type="url" id="ann_image_url" value="${utils.esc(ann.image_url || '')}" placeholder="https://... (เช่น Postimages หรือ ลิงก์ตรง)" oninput="handlers.handleAnnounceUrlChange(this.value)" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-primary bg-white">
+                                            </div>
+                                        </div>
+
+                                        <!-- Preview Box -->
+                                        <div id="ann_image_preview_box" class="${ann.image_url ? '' : 'hidden'} bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+                                            <img id="ann_image_preview" src="${ann.image_url || ''}" alt="Preview" class="max-h-64 max-w-full sm:max-w-md object-contain rounded-xl border border-slate-200 shadow-sm bg-white">
+                                            <div class="space-y-2 text-center sm:text-left">
+                                                <p class="text-xs font-semibold text-slate-600">รูปภาพที่เลือกใช้งานใน Pop-up (ขนาด 2 เท่า)</p>
+                                                <button type="button" onclick="handlers.clearAnnounceImage()" class="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition">
+                                                    🗑️ ลบรูปภาพนี้
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right 1 Col: Info & Guide -->
+                            <div class="space-y-6">
+                                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-6 rounded-3xl shadow-sm space-y-4">
+                                    <div class="flex items-center gap-2.5 text-blue-900 font-bold text-base">
+                                        <span class="text-xl">💡</span> คำแนะนำการใช้งาน
+                                    </div>
+                                    <ul class="text-xs text-blue-900/80 space-y-2.5 list-disc list-inside leading-relaxed">
+                                        <li><b>ข้อความ:</b> ควรใช้ข้อความที่กระชับ ชัดเจน เพื่อให้ผู้ใช้งานรับทราบได้ทันที</li>
+                                        <li><b>รูปภาพ:</b> สามารถใช้ภาพแบนเนอร์ แผ่นพับ ประชาสัมพันธ์ หรือกำหนดการได้</li>
+                                        <li><b>ไม่ต้องแสดงซ้ำ:</b> ผู้ใช้งานสามารถติ๊ก <i>"ไม่ต้องแสดงอีกในวันนี้"</i> เพื่อไม่ให้ Pop-up กวนใจในวันเดียวกัน</li>
+                                        <li><b>รีเฟรชข่าวใหม่:</b> เมื่อ Admin แก้ไขและกดบันทึก ระบบจะปรับรหัสอัปเดตใหม่ ทำให้ Pop-up เด้งแจ้งเตือนผู้ใช้อีกครั้งเสมอ</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('page-container').innerHTML = html;
+                } catch (e) {
+                    ui.toast(e.message, 'error');
+                } finally {
+                    ui.hideLoader();
+                }
             }
         };
 
         const handlers = {
+            // --- ระบบข่าวประกาศ (Login Pop-up & Management) ---
+            loadLoginAnnouncement: async () => {
+                try {
+                    let ann = null;
+                    try {
+                        const { data, error } = await supabaseClient.from('system_announcements').select('*').eq('is_active', true).order('updated_at', { ascending: false }).limit(1);
+                        if (!error && data && data.length > 0) ann = data[0];
+                    } catch (_) { }
+
+                    if (!ann) {
+                        try {
+                            const fb = localStorage.getItem('bpp_fallback_announcement');
+                            if (fb) {
+                                const parsed = JSON.parse(fb);
+                                if (parsed.is_active) ann = parsed;
+                            }
+                        } catch (_) { }
+                    }
+
+                    if (!ann || !ann.title) return;
+
+                    // ตรวจสอบว่าผู้ใช้เคยกด "ไม่ต้องแสดงอีกในวันนี้" หรือไม่
+                    const hideKey = 'bpp_hide_ann_' + (ann.id || 'current');
+                    const hideDate = localStorage.getItem(hideKey);
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    if (hideDate === todayStr) return;
+
+                    handlers.showAnnouncementModal(ann);
+                } catch (e) {
+                    console.error("Announcement load error:", e);
+                }
+            },
+
+            showAnnouncementModal: (ann) => {
+                window._activeAnnouncementId = ann.id || 'current';
+                const titleEl = document.getElementById('ann-modal-title');
+                const dateEl = document.getElementById('ann-modal-date');
+                const contentEl = document.getElementById('ann-modal-content');
+                const imgContainer = document.getElementById('ann-modal-img-container');
+                const imgEl = document.getElementById('ann-modal-img');
+                const modal = document.getElementById('login-announcement-modal');
+                const box = document.getElementById('login-announcement-box');
+
+                if (!modal || !titleEl) return;
+
+                titleEl.innerText = ann.title || 'ประกาศ';
+                dateEl.innerText = ann.updated_at ? utils.formatDate(ann.updated_at) : 'ล่าสุด';
+                contentEl.innerText = ann.content || '';
+
+                if (ann.image_url) {
+                    imgEl.src = ann.image_url;
+                    imgContainer.classList.remove('hidden');
+                } else {
+                    imgEl.src = '';
+                    imgContainer.classList.add('hidden');
+                }
+
+                const chk = document.getElementById('ann-hide-today-chk');
+                if (chk) chk.checked = false;
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    if (box) { box.classList.remove('scale-95'); box.classList.add('scale-100'); }
+                }, 10);
+            },
+
+            closeLoginAnnouncement: () => {
+                const chk = document.getElementById('ann-hide-today-chk');
+                if (chk && chk.checked && window._activeAnnouncementId) {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    localStorage.setItem('bpp_hide_ann_' + window._activeAnnouncementId, todayStr);
+                }
+                const modal = document.getElementById('login-announcement-modal');
+                const box = document.getElementById('login-announcement-box');
+                if (box) { box.classList.remove('scale-100'); box.classList.add('scale-95'); }
+                setTimeout(() => {
+                    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+                }, 150);
+            },
+
+            compressImage: (file, maxWidth = 1800, quality = 0.85) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            let width = img.width;
+                            let height = img.height;
+                            if (width > maxWidth) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                            resolve(dataUrl);
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            },
+
+            handleAnnounceImageSelect: async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                ui.showLoader('กำลังประมวลผลรูปภาพความละเอียดสูง...');
+                try {
+                    const compressed = await handlers.compressImage(file, 1800, 0.85);
+                    window._currentAnnounceImage = compressed;
+                    const prevBox = document.getElementById('ann_image_preview_box');
+                    const prevImg = document.getElementById('ann_image_preview');
+                    const urlInput = document.getElementById('ann_image_url');
+                    if (prevImg) prevImg.src = compressed;
+                    if (prevBox) prevBox.classList.remove('hidden');
+                    if (urlInput) urlInput.value = '';
+                    ui.toast('เลือกและบีบอัดรูปภาพสำเร็จ', 'success');
+                } catch (err) {
+                    ui.toast('ประมวลผลรูปภาพล้มเหลว: ' + err.message, 'error');
+                } finally {
+                    ui.hideLoader();
+                }
+            },
+
+            handleAnnounceUrlChange: (url) => {
+                url = (url || '').trim();
+                window._currentAnnounceImage = url;
+                const prevBox = document.getElementById('ann_image_preview_box');
+                const prevImg = document.getElementById('ann_image_preview');
+                if (url) {
+                    if (prevImg) prevImg.src = url;
+                    if (prevBox) prevBox.classList.remove('hidden');
+                } else {
+                    if (prevBox) prevBox.classList.add('hidden');
+                }
+            },
+
+            clearAnnounceImage: () => {
+                window._currentAnnounceImage = '';
+                const fileInput = document.getElementById('ann_file_input');
+                const urlInput = document.getElementById('ann_image_url');
+                const prevBox = document.getElementById('ann_image_preview_box');
+                const prevImg = document.getElementById('ann_image_preview');
+                if (fileInput) fileInput.value = '';
+                if (urlInput) urlInput.value = '';
+                if (prevImg) prevImg.src = '';
+                if (prevBox) prevBox.classList.add('hidden');
+                ui.toast('ลบรูปภาพแล้ว', 'info');
+            },
+
+            updateAnnounceStatusBadge: (isActive) => {
+                const badge = document.getElementById('ann_status_indicator');
+                if (badge) {
+                    badge.className = `text-xs font-bold px-3 py-1.5 rounded-xl w-fit flex items-center gap-1.5 ${isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`;
+                    badge.innerHTML = `<span>${isActive ? '🟢 กำลังเปิดแสดงผลในหน้า Login' : '⚪ ปิดการแสดงผล (ไม่แสดง)'}</span>`;
+                }
+            },
+
+            previewAnnouncement: () => {
+                const title = (document.getElementById('ann_title')?.value || '').trim() || 'หัวข้อประกาศตัวอย่าง';
+                const content = (document.getElementById('ann_content')?.value || '').trim() || 'นี่คือข้อความตัวอย่างที่จะแสดงในหน้าต่างข่าวประกาศ...';
+                const image_url = window._currentAnnounceImage || document.getElementById('ann_image_url')?.value || '';
+                handlers.showAnnouncementModal({
+                    id: 'preview',
+                    title,
+                    content,
+                    image_url,
+                    updated_at: new Date().toISOString()
+                });
+            },
+
+            saveAnnouncement: async () => {
+                if (state.user?.role !== 'admin') { ui.toast('เฉพาะผู้ดูแลระบบเท่านั้นที่มีสิทธิ์', 'error'); return; }
+                const title = (document.getElementById('ann_title')?.value || '').trim();
+                const content = (document.getElementById('ann_content')?.value || '').trim();
+                const is_active = document.getElementById('ann_is_active')?.checked ?? true;
+                const image_url = window._currentAnnounceImage || document.getElementById('ann_image_url')?.value || '';
+
+                if (!title) { ui.toast('กรุณาระบุหัวข้อประกาศ', 'warning'); return; }
+
+                ui.showLoader('กำลังบันทึกข่าวประกาศ...');
+                try {
+                    const payload = {
+                        title,
+                        content,
+                        image_url: image_url || null,
+                        is_active,
+                        updated_by: state.user.full_name || state.user.username || 'admin',
+                        updated_at: new Date().toISOString()
+                    };
+
+                    let saved = false;
+                    try {
+                        const { data: existing, error: selErr } = await supabaseClient.from('system_announcements').select('id').limit(1);
+                        if (selErr && (selErr.code === 'PGRST205' || selErr.message?.includes('schema cache'))) {
+                            throw new Error("TABLE_NOT_FOUND");
+                        }
+                        if (existing && existing.length > 0) {
+                            payload.id = existing[0].id;
+                            const { error: updErr } = await supabaseClient.from('system_announcements').update(payload).eq('id', existing[0].id);
+                            if (updErr) throw updErr;
+                        } else {
+                            const { error: insErr } = await supabaseClient.from('system_announcements').insert([payload]);
+                            if (insErr) throw insErr;
+                        }
+                        saved = true;
+                    } catch (dbErr) {
+                        if (dbErr.message === "TABLE_NOT_FOUND" || dbErr.code === 'PGRST205' || dbErr.message?.includes('schema cache')) {
+                            localStorage.setItem('bpp_fallback_announcement', JSON.stringify({ ...payload, id: 1 }));
+                            ui.openModal('⚠️ จำเป็นต้องสร้างตารางในฐานข้อมูล', `
+                                <div class="space-y-4 text-sm text-slate-700">
+                                    <p class="font-medium text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                                        บันทึกประกาศลงในเครื่องนี้เรียบร้อยแล้ว แต่ยังไม่พบตาราง <b>system_announcements</b> ใน Supabase กรุณารันคำสั่ง SQL ด้านล่างใน Supabase SQL Editor เพื่อให้แสดงผลกับผู้ใช้ทุกคน
+                                    </p>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">คำสั่ง SQL (คัดลอกไปรันใน Supabase SQL Editor):</label>
+                                        <pre class="bg-slate-900 text-slate-100 p-3 rounded-xl text-xs overflow-x-auto select-all">CREATE TABLE IF NOT EXISTS public.system_announcements (
+    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    title text NOT NULL,
+    content text,
+    image_url text,
+    is_active boolean DEFAULT true,
+    updated_by text,
+    updated_at timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now()
+);
+ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
+                                    </div>
+                                    <p class="text-xs text-slate-500">หรือสามารถเปิดไฟล์ <b>create_announcements_table.sql</b> ในโฟลเดอร์โครงการไปรันได้เช่นกันครับ</p>
+                                </div>
+                            `);
+                            saved = true;
+                        } else {
+                            throw dbErr;
+                        }
+                    }
+
+                    if (saved) {
+                        logger('ANNOUNCEMENT_UPDATE', `อัปเดตข่าวประกาศ: ${title.substring(0, 30)}`);
+                        ui.toast('บันทึกข่าวประกาศเรียบร้อยแล้ว', 'success');
+                    }
+                } catch (e) {
+                    ui.toast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+                } finally {
+                    ui.hideLoader();
+                }
+            },
+
             // --- แดชบอร์ด (การ์ด & กราฟ & ฟิลเตอร์) ---
             renderDashSummaryCards: (data) => {
                 let tBud = 0, tSign = 0, tDis = 0;
@@ -1309,7 +1886,10 @@
                 const filtered = (window.rawDashboardData || []).filter(item => {
                     const matchSheet = (sheetFilter === 'ALL') || (item.sourceSheet === sheetFilter);
                     const matchStatus = (statusFilter === 'ALL') || (String(item.statusNo) === statusFilter);
-                    const matchSearch = ((item.institution || '').toLowerCase().includes(searchKeyword)) || ((item.item || '').toLowerCase().includes(searchKeyword)) || ((item.budgetCode || '').toLowerCase().includes(searchKeyword));
+                    const matchSearch = ((item.institution || '').toLowerCase().includes(searchKeyword)) ||
+                        ((item.item || '').toLowerCase().includes(searchKeyword)) ||
+                        ((item.budgetCode || '').toLowerCase().includes(searchKeyword)) ||
+                        ((item.budgetCode2 || '').toLowerCase().includes(searchKeyword));
                     return matchSheet && matchStatus && matchSearch;
                 });
 
@@ -1354,10 +1934,13 @@
                     let tCol = (r.type === 'ที่ดิน/สิ่งก่อสร้าง' || r.type === 'สิ่งก่อสร้าง') ? 'bg-slate-700 text-white' : 'bg-purple-600 text-white';
                     html += `<tr class="hover:bg-blue-50/40 transition">
                         <td class="p-3 text-center border-r border-slate-100"><button onclick="app.navigate('workflow','${r.id}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap font-medium">รายงานผล →</button></td>
-                        <td class="p-3 font-mono text-sm font-bold text-indigo-600 border-r border-slate-100">${utils.esc(r.budgetCode) || '-'}</td>
+                        <td class="p-3 font-mono text-sm font-bold text-indigo-600 border-r border-slate-100" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);">
+                            <div class="truncate" title="รหัสโครงการ e-GP: ${utils.esc(r.budgetCode)}">${utils.esc(r.budgetCode) || '-'}</div>
+                            ${r.budgetCode2 ? `<div class="text-[11px] font-normal text-emerald-700 truncate mt-0.5" title="รหัสงบประมาณ: ${utils.esc(r.budgetCode2)}">งบ: ${utils.esc(r.budgetCode2)}</div>` : ''}
+                        </td>
                         <td class="p-3 border-r border-slate-100"><span class="text-[10px] px-2 py-0.5 rounded-md ${tCol}">${utils.esc(r.type)}</span></td>
-                        <td class="p-3 font-semibold text-slate-800 max-w-[150px] truncate border-r border-slate-100" title="${utils.esc(r.institution)}">${utils.esc(r.institution)}</td>
-                        <td class="p-3 text-slate-600 max-w-[250px] truncate border-r border-slate-100" title="${utils.esc(r.item)}">${utils.esc(r.item)}</td>
+                        <td class="p-3 font-semibold text-slate-800 border-r border-slate-100" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);" title="${utils.esc(r.institution)}"><div class="truncate">${utils.esc(r.institution)}</div></td>
+                        <td class="p-3 text-slate-600 border-r border-slate-100" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);" title="${utils.esc(r.item)}"><div class="truncate">${utils.esc(r.item)}</div></td>
                         <td class="p-3 text-center border-r border-slate-100"><span class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold border shadow-xs whitespace-nowrap inline-block ${utils.getStatusColor(r.statusNo)}">${utils.esc(r.status)}</span></td>
                         <td class="p-3 text-right font-bold text-slate-800 border-r border-slate-100">${utils.formatMoney(r.budget)}</td>
                         <td class="p-3 text-right font-medium text-indigo-600 border-r border-slate-100">${utils.formatMoney(r.poAmount)}</td>
@@ -1492,6 +2075,7 @@
                         itemName.toLowerCase().includes(searchStr) ||
                         (p.institution_name || '').toLowerCase().includes(searchStr) ||
                         (p.budget_code || '').toLowerCase().includes(searchStr) ||
+                        (p.budget_code2 || '').toLowerCase().includes(searchStr) ||
                         itemCode.toLowerCase().includes(searchStr);
                     return matchYear && matchSearch;
                 });
@@ -1517,8 +2101,9 @@
                     const itemType = p.item_type || p.project_type || '';
                     return `<div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col lg:flex-row justify-between lg:items-center gap-4 card-hover shadow-sm">
                         <div>
-                            <div class="flex items-center gap-2 mb-2">
-                                ${p.budget_code ? `<span class="text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md uppercase font-mono">${utils.esc(p.budget_code)}</span>` : `<span class="text-[10px] font-medium tracking-wider bg-slate-100 text-slate-400 px-2.5 py-1 rounded-md">ยังไม่ระบุรหัสงบฯ</span>`}
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                ${p.budget_code ? `<span class="text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md uppercase font-mono" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : `<span class="text-[10px] font-medium tracking-wider bg-slate-100 text-slate-400 px-2.5 py-1 rounded-md">ยังไม่ระบุรหัส e-GP</span>`}
+                                ${p.budget_code2 ? `<span class="text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-md uppercase font-mono" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''}
                                 ${p.fiscal_year ? `<span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md">ปี ${utils.esc(p.fiscal_year)}</span>` : ''}
                             </div>
                             <h3 class="font-bold text-lg text-slate-800">${utils.esc(itemName)}</h3>
@@ -1649,7 +2234,8 @@
                     { id: 'col_type', name: 'ประเภท', default: true },
                     { id: 'col_prov', name: 'จังหวัด', default: true },
                     { id: 'col_plan', name: 'โครงการ', default: true },
-                    { id: 'col_bcode', name: 'รหัสงบประมาณ', default: true },
+                    { id: 'col_bcode', name: 'รหัสโครงการ e-GP', default: true },
+                    { id: 'col_bcode2', name: 'รหัสงบประมาณ', default: true },
                     { id: 'col_inst', name: 'สถานศึกษา', default: true },
                     { id: 'col_item', name: 'รายการ', default: true },
                     { id: 'col_stat', name: 'สถานะ', default: true },
@@ -1682,7 +2268,7 @@
                 ui.openModal('👁️ ตั้งค่าการแสดงคอลัมน์', html);
             },
             saveColumnSettings: () => {
-                const cols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
+                const cols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_bcode2', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
                 if (!window.reportColsState) window.reportColsState = {};
                 cols.forEach(c => {
                     const el = document.getElementById(`chk_${c}`);
@@ -1721,7 +2307,7 @@
             },
 
             applyReportFilters: () => {
-                const defaultCols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
+                const defaultCols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_bcode2', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
                 if (!window.reportColsState) window.reportColsState = {};
                 defaultCols.forEach(c => {
                     if (window.reportColsState[c] === undefined) window.reportColsState[c] = true;
@@ -1751,6 +2337,8 @@
                         (p.project_name || '').toLowerCase().includes(search) ||
                         (p.institution_name || '').toLowerCase().includes(search) ||
                         (p.budget_code || '').toLowerCase().includes(search) ||
+                        (p.budget_code2 || '').toLowerCase().includes(search) ||
+                        (p.plan_type || '').toLowerCase().includes(search) ||
                         (p.province || '').toLowerCase().includes(search) ||
                         (p.resp_person || '').toLowerCase().includes(search) ||
                         (p.resp_phone || '').toLowerCase().includes(search);
@@ -1782,12 +2370,13 @@
                 if (cols.col_year) thead += `<th class="p-3 font-semibold border-r text-center min-w-[80px]">ปีงบฯ</th>`;
                 if (cols.col_type) thead += `<th class="p-3 font-semibold border-r text-center min-w-[100px]">ประเภท</th>`;
                 if (cols.col_prov) thead += `<th class="p-3 font-semibold border-r min-w-[100px]">จังหวัด</th>`;
-                if (cols.col_plan) thead += `<th class="p-3 font-semibold border-r min-w-[100px] max-w-[120px]">โครงการ</th>`;
-                if (cols.col_bcode) thead += `<th class="p-3 font-semibold border-r min-w-[120px]">รหัสงบประมาณ</th>`;
-                if (cols.col_inst) thead += `<th class="p-3 font-semibold border-r min-w-[100px] max-w-[150px]">สถานศึกษา</th>`;
+                if (cols.col_plan) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-plan-w, 150px); min-width: var(--rep-col-plan-w, 150px); max-width: var(--rep-col-plan-w, 150px);"><div class="truncate pr-2">โครงการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-plan-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-plan-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-plan-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
+                if (cols.col_bcode) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-bcode-w, 150px); min-width: var(--rep-col-bcode-w, 150px); max-width: var(--rep-col-bcode-w, 150px);"><div class="truncate pr-2">รหัสโครงการ e-GP</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
+                if (cols.col_bcode2) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-bcode2-w, 150px); min-width: var(--rep-col-bcode2-w, 150px); max-width: var(--rep-col-bcode2-w, 150px);"><div class="truncate pr-2">รหัสงบประมาณ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-bcode2-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-bcode2-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-bcode2-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
+                if (cols.col_inst) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-inst-w, 190px); min-width: var(--rep-col-inst-w, 190px); max-width: var(--rep-col-inst-w, 190px);"><div class="truncate pr-2">สถานศึกษา</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-inst-w', 100, 600)" ontouchstart="ui.initColResize(event, '--rep-col-inst-w', 100, 600)" ondblclick="ui.resetColWidth(event, '--rep-col-inst-w', 190)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
 
                 // Item Name
-                thead += `<th class="p-3 font-semibold border-r bg-slate-50 min-w-[150px] max-w-[250px]">รายการ</th>`;
+                thead += `<th class="p-3 font-semibold border-r bg-slate-50 relative select-none" style="width: var(--rep-col-item-w, 280px); min-width: var(--rep-col-item-w, 280px); max-width: var(--rep-col-item-w, 280px);"><div class="truncate pr-2">รายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--rep-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--rep-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
 
                 // Status (หน้า คอลัม งบประมาณ)
                 if (cols.col_stat) thead += `<th class="p-3 font-semibold text-center border-r min-w-[150px]">สถานะ</th>`;
@@ -1847,11 +2436,12 @@
                     if (cols.col_year) row += `<td class="p-3 text-center font-bold text-slate-700 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.fiscal_year || '-')}</td>`;
                     if (cols.col_type) row += `<td class="p-3 text-center text-slate-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.item_type || '-')}</td>`;
                     if (cols.col_prov) row += `<td class="p-3 text-slate-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.province || '-')}</td>`;
-                    if (cols.col_plan) row += `<td class="p-3 text-slate-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''} whitespace-normal min-w-[100px] max-w-[120px]"><p class="line-clamp-2 text-xs" title="${utils.esc(p.plan_type)}">${utils.esc(p.plan_type || '-')}</p></td>`;
-                    if (cols.col_bcode) row += `<td class="p-3 font-mono text-indigo-600 font-medium border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.budget_code || '-')}</td>`;
-                    if (cols.col_inst) row += `<td class="p-3 text-slate-800 font-medium whitespace-normal min-w-[100px] max-w-[150px] border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}"><p class="line-clamp-3" title="${utils.esc(p.institution_name)}">${utils.esc(p.institution_name)}</p></td>`;
+                    if (cols.col_plan) row += `<td class="p-3 text-slate-700 font-medium border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''} whitespace-normal" style="width: var(--rep-col-plan-w, 150px); min-width: var(--rep-col-plan-w, 150px); max-width: var(--rep-col-plan-w, 150px);"><p class="line-clamp-2 text-xs" title="${utils.esc(p.plan_type || '-')}">${utils.esc(p.plan_type || '-')}</p></td>`;
+                    if (cols.col_bcode) row += `<td class="p-3 font-mono text-indigo-600 font-medium border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}" style="width: var(--rep-col-bcode-w, 150px); min-width: var(--rep-col-bcode-w, 150px); max-width: var(--rep-col-bcode-w, 150px);"><div class="truncate" title="${utils.esc(p.budget_code)}">${utils.esc(p.budget_code || '-')}</div></td>`;
+                    if (cols.col_bcode2) row += `<td class="p-3 font-mono text-emerald-700 font-medium border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}" style="width: var(--rep-col-bcode2-w, 150px); min-width: var(--rep-col-bcode2-w, 150px); max-width: var(--rep-col-bcode2-w, 150px);"><div class="truncate" title="${utils.esc(p.budget_code2)}">${utils.esc(p.budget_code2 || '-')}</div></td>`;
+                    if (cols.col_inst) row += `<td class="p-3 text-slate-800 font-medium whitespace-normal border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}" style="width: var(--rep-col-inst-w, 190px); min-width: var(--rep-col-inst-w, 190px); max-width: var(--rep-col-inst-w, 190px);"><p class="line-clamp-3" title="${utils.esc(p.institution_name)}">${utils.esc(p.institution_name)}</p></td>`;
 
-                    row += `<td class="p-3 font-medium whitespace-normal min-w-[150px] max-w-[250px] border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : 'text-slate-800'}"><p class="line-clamp-3" title="${utils.esc(p.project_name)}">${utils.esc(p.project_name)}</p></td>`;
+                    row += `<td class="p-3 font-medium whitespace-normal border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : 'text-slate-800'}" style="width: var(--rep-col-item-w, 280px); min-width: var(--rep-col-item-w, 280px); max-width: var(--rep-col-item-w, 280px);"><p class="line-clamp-3" title="${utils.esc(p.project_name)}">${utils.esc(p.project_name)}</p></td>`;
 
                     // Status (หน้า คอลัม งบประมาณ)
                     if (cols.col_stat) row += `<td class="p-3 text-center border-r border-slate-100"><span class="px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl border shadow-xs whitespace-nowrap inline-block ${utils.getStatusColor(p.current_status)}">${p.current_status}. ${utils.getStatusName(p.current_status)}</span></td>`;
@@ -1877,7 +2467,7 @@
                 const visibleColCount = Object.values(cols).filter(Boolean).length + 1; // +1 for checkbox
 
                 // Checkbox (1) + Item Name (1) = 2
-                const leftColsCount = 2 + (cols.col_manage ? 1 : 0) + (cols.col_year ? 1 : 0) + (cols.col_type ? 1 : 0) + (cols.col_prov ? 1 : 0) + (cols.col_plan ? 1 : 0) + (cols.col_bcode ? 1 : 0) + (cols.col_inst ? 1 : 0) + (cols.col_stat ? 1 : 0);
+                const leftColsCount = 2 + (cols.col_manage ? 1 : 0) + (cols.col_year ? 1 : 0) + (cols.col_type ? 1 : 0) + (cols.col_prov ? 1 : 0) + (cols.col_plan ? 1 : 0) + (cols.col_bcode ? 1 : 0) + (cols.col_bcode2 ? 1 : 0) + (cols.col_inst ? 1 : 0) + (cols.col_stat ? 1 : 0);
                 const rightColsCount = [cols.col_start, cols.col_end, cols.col_prog, cols.col_prob, cols.col_resp_name, cols.col_resp_phone].filter(Boolean).length;
 
                 if (groupBy && groupBy !== '') {
@@ -1940,7 +2530,7 @@
             exportReportExcel: () => {
                 if (!window.rawReportData || window.rawReportData.length === 0) return ui.toast('ไม่มีข้อมูลสำหรับ Export', 'warning');
                 const search = (document.getElementById('rep_search')?.value || '').toLowerCase().trim(); const year = document.getElementById('rep_year')?.value || ''; const province = document.getElementById('rep_province')?.value || ''; const bcode = document.getElementById('rep_bcode')?.value || ''; const inst = document.getElementById('rep_inst')?.value || ''; const status = document.getElementById('rep_status')?.value || '';
-                const filtered = window.rawReportData.filter(p => { const matchYear = year === '' || String(p.fiscal_year) === year; const matchSearch = search === '' || (p.item_name || p.project_name || '').toLowerCase().includes(search) || (p.institution_name || '').toLowerCase().includes(search) || (p.budget_code || '').toLowerCase().includes(search) || (p.province || '').toLowerCase().includes(search) || (p.resp_person || '').toLowerCase().includes(search) || (p.resp_phone || '').toLowerCase().includes(search); const matchProv = province === '' || p.province === province; const matchBcode = bcode === '' || p.budget_code === bcode; const matchInst = inst === '' || p.institution_name === inst; const matchStatus = status === '' || String(p.current_status) === status; return matchYear && matchSearch && matchProv && matchBcode && matchInst && matchStatus; });
+                const filtered = window.rawReportData.filter(p => { const matchYear = year === '' || String(p.fiscal_year) === year; const matchSearch = search === '' || (p.item_name || p.project_name || '').toLowerCase().includes(search) || (p.institution_name || '').toLowerCase().includes(search) || (p.budget_code || '').toLowerCase().includes(search) || (p.budget_code2 || '').toLowerCase().includes(search) || (p.plan_type || '').toLowerCase().includes(search) || (p.province || '').toLowerCase().includes(search) || (p.resp_person || '').toLowerCase().includes(search) || (p.resp_phone || '').toLowerCase().includes(search); const matchProv = province === '' || p.province === province; const matchBcode = bcode === '' || p.budget_code === bcode; const matchInst = inst === '' || p.institution_name === inst; const matchStatus = status === '' || String(p.current_status) === status; return matchYear && matchSearch && matchProv && matchBcode && matchInst && matchStatus; });
                 if (filtered.length === 0) return ui.toast('ไม่มีข้อมูลที่จะ Export', 'warning');
 
                 const dataToExport = filtered.map(p => {
@@ -1955,7 +2545,8 @@
                         'ประเภท': p.item_type || '-',
                         'จังหวัด': p.province || '-',
                         'โครงการ': p.plan_type || '-',
-                        'รหัสงบประมาณ': p.budget_code || '-',
+                        'รหัสโครงการ e-GP': p.budget_code || '-',
+                        'รหัสงบประมาณ': p.budget_code2 || '-',
                         'สถานศึกษา': p.institution_name || '-',
                         'รายการ': p.item_name || p.project_name || '-',
                         'สถานะ': `${p.current_status}. ${utils.getStatusName(p.current_status)}`,
@@ -2268,7 +2859,8 @@
                             <div class="bg-gradient-to-br from-slate-50 to-blue-50/40 p-4 sm:p-5 rounded-2xl border border-slate-200">
                                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        ${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 text-indigo-800 text-xs px-2.5 py-1 rounded-lg font-bold">${utils.esc(p.budget_code)}</span>` : ''}
+                                        ${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 text-indigo-800 text-xs px-2.5 py-1 rounded-lg font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : ''}
+                                        ${p.budget_code2 ? `<span class="font-mono bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs px-2.5 py-1 rounded-lg font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''}
                                         <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-blue-100 text-blue-800">ปี ${p.fiscal_year || '-'}</span>
                                         <span class="text-xs text-slate-500 font-medium">📍 ${utils.esc(p.province || '-')}</span>
                                     </div>
@@ -2286,6 +2878,7 @@
                                     <span>🏛️ สถานศึกษา: <span class="font-bold text-slate-800">${utils.esc(p.institution_name || '-')}</span></span>
                                     ${p.resp_person ? `<span class="text-slate-700">👤 ผู้รับผิดชอบ: <b class="text-slate-900">${utils.esc(p.resp_person)}</b></span>` : '<span class="text-slate-400">👤 ผู้รับผิดชอบ: <i>ยังไม่ระบุ</i></span>'}
                                     ${p.resp_phone ? `<a href="tel:${utils.esc(p.resp_phone)}" title="คลิกโทรออก" class="inline-flex items-center gap-1 font-mono text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50/80 hover:bg-blue-100 px-2 py-0.5 rounded-lg border border-blue-200/80 transition"><span>📞</span> ${utils.esc(p.resp_phone)}</a>` : ''}
+                                    ${p.plan_type ? `<span class="text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-md font-medium">📋 ${utils.esc(p.plan_type)}</span>` : ''}
                                     ${p.item_type ? `<span class="text-slate-500">| ประเภท: ${utils.esc(p.item_type)}</span>` : ''}
                                 </p>
 
@@ -2457,14 +3050,18 @@
                                 <textarea name="name" required placeholder="ระบุชื่อรายการ เช่น ก่อสร้างอาคารเรียนและปฏิบัติการ หรือ ชุดปฏิบัติการ..." rows="2" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary text-slate-700 transition"></textarea>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-semibold mb-1.5 text-slate-700">5. งบตาม พ.ร.บ. (บาท) <span class="text-red-500">*</span></label>
                                     <input name="budget" type="number" min="0" step="0.01" required placeholder="0.00" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary text-slate-800 font-bold transition">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold mb-1.5 text-slate-700">6. รหัสประกาศโครงการ e-GP <span class="text-xs text-slate-400 font-normal">(เว้นว่างไว้ได้)</span></label>
+                                    <label class="block text-sm font-semibold mb-1.5 text-slate-700">6. รหัสโครงการ e-GP <span class="text-xs text-slate-400 font-normal">(เว้นว่างไว้ได้)</span></label>
                                     <input name="egp_code" type="text" placeholder="เช่น 68xxxxxxxx หรือเว้นว่างไว้" class="w-full px-4 py-2.5 border border-blue-100 bg-blue-50/40 rounded-xl outline-none focus:ring-2 focus:ring-primary font-mono text-blue-700 transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold mb-1.5 text-slate-700">7. รหัสงบประมาณ <span class="text-xs text-slate-400 font-normal">(เว้นว่างไว้ได้)</span></label>
+                                    <input name="budget_code2" type="text" placeholder="ระบุรหัสงบประมาณ (ถ้ามี)" class="w-full px-4 py-2.5 border border-emerald-100 bg-emerald-50/40 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-emerald-700 transition">
                                 </div>
                             </div>
 
@@ -2488,6 +3085,7 @@
                     const iType = fd.get('type');
                     const iBudget = Number(fd.get('budget')) || 0;
                     const iEgp = (fd.get('egp_code') || '').trim();
+                    const iBcode2 = (fd.get('budget_code2') || '').trim() || null;
 
                     if (!iInst) {
                         throw new Error('กรุณาเลือกสถานศึกษา');
@@ -2513,7 +3111,8 @@
                             p_budget_amount: iBudget,
                             p_fiscal_year: iYear,
                             p_institution_name: iInst,
-                            p_budget_code: iBcode
+                            p_budget_code: iBcode,
+                            p_budget_code2: iBcode2
                         });
                     } catch (errRpc) {
                         try {
@@ -2522,16 +3121,29 @@
                                 p_item_code: iCode,
                                 p_item_name: iName,
                                 p_item_type: iType,
-                                p_budget_amount: iBudget
+                                p_budget_amount: iBudget,
+                                p_fiscal_year: iYear,
+                                p_institution_name: iInst,
+                                p_budget_code: iBcode
                             });
-                        } catch (errRpc2) {
-                            res = await rpc("custom_create_project", {
-                                p_session_token: state.sessionToken,
-                                p_project_code: iCode,
-                                p_project_name: iName,
-                                p_project_type: iType,
-                                p_budget_amount: iBudget
-                            });
+                        } catch (errRpcFallback) {
+                            try {
+                                res = await rpc("custom_create_item", {
+                                    p_session_token: state.sessionToken,
+                                    p_item_code: iCode,
+                                    p_item_name: iName,
+                                    p_item_type: iType,
+                                    p_budget_amount: iBudget
+                                });
+                            } catch (errRpc2) {
+                                res = await rpc("custom_create_project", {
+                                    p_session_token: state.sessionToken,
+                                    p_project_code: iCode,
+                                    p_project_name: iName,
+                                    p_project_type: iType,
+                                    p_budget_amount: iBudget
+                                });
+                            }
                         }
                     }
 
@@ -2541,13 +3153,14 @@
 
                     const newItemId = res.item_id;
 
-                    // Safeguard: อัปเดตข้อมูลสถานศึกษา, ปีงบประมาณ, และรหัส e-GP เพิ่มเติมให้มั่นใจ 100%
+                    // Safeguard: อัปเดตข้อมูลสถานศึกษา, ปีงบประมาณ, รหัส e-GP และรหัสงบประมาณ เพิ่มเติมให้มั่นใจ 100%
                     if (newItemId) {
                         try {
                             await sbClient.from('items').update({
                                 fiscal_year: iYear,
                                 institution_name: iInst,
                                 budget_code: iBcode,
+                                budget_code2: iBcode2,
                                 item_code: iCode
                             }).eq('id', newItemId);
                         } catch (errUpdate) {
@@ -2599,9 +3212,15 @@
                             <label class="block text-sm font-medium mb-1 text-slate-500">รหัสอ้างอิงรายการ (สร้างโดยระบบ)</label>
                             <input type="text" value="${utils.esc(code)}" disabled class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-100 text-slate-400 font-bold cursor-not-allowed">
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">รหัสประกาศโครงการในระบบ e-GP</label>
-                            <input type="text" id="ep_bcode" value="${utils.esc(it.budget_code || '')}" placeholder="ระบุรหัสงบประมาณ..." class="w-full px-4 py-2.5 border border-blue-200 bg-blue-50/50 rounded-xl outline-none focus:ring-2 focus:ring-primary font-mono text-blue-700 font-bold">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">รหัสโครงการ e-GP</label>
+                                <input type="text" id="ep_bcode" value="${utils.esc(it.budget_code || '')}" placeholder="เช่น 68xxxxxxxx หรือเว้นว่างไว้" class="w-full px-4 py-2.5 border border-blue-200 bg-blue-50/50 rounded-xl outline-none focus:ring-2 focus:ring-primary font-mono text-blue-700 font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">รหัสงบประมาณ</label>
+                                <input type="text" id="ep_bcode2" value="${utils.esc(it.budget_code2 || '')}" placeholder="ระบุรหัสงบประมาณ..." class="w-full px-4 py-2.5 border border-emerald-200 bg-emerald-50/50 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-emerald-700 font-bold">
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">ชื่อรายการ <span class="text-red-500">*</span></label>
@@ -2631,6 +3250,7 @@
                 ui.showLoader('กำลังบันทึกข้อมูล...');
                 try {
                     const bcode = document.getElementById('ep_bcode').value;
+                    const bcode2 = document.getElementById('ep_bcode2')?.value || '';
                     const name = document.getElementById('ep_name').value;
                     const type = document.getElementById('ep_type').value;
                     const budget = Number(document.getElementById('ep_budget').value);
@@ -2642,20 +3262,56 @@
                             p_item_name: name,
                             p_item_type: type,
                             p_budget_amount: budget,
-                            p_budget_code: bcode
+                            p_budget_code: bcode,
+                            p_budget_code2: bcode2
                         });
                     } catch (errRpc) {
-                        res = await rpc('custom_update_project_details', {
-                            p_session_token: state.sessionToken,
-                            p_project_id: itemId,
-                            p_project_name: name,
-                            p_project_type: type,
-                            p_budget_amount: budget,
-                            p_budget_code: bcode
-                        });
+                        try {
+                            res = await rpc('custom_update_item_details', {
+                                p_session_token: state.sessionToken,
+                                p_item_id: itemId,
+                                p_item_name: name,
+                                p_item_type: type,
+                                p_budget_amount: budget,
+                                p_budget_code: bcode
+                            });
+                        } catch (errRpc2) {
+                            res = await rpc('custom_update_project_details', {
+                                p_session_token: state.sessionToken,
+                                p_project_id: itemId,
+                                p_project_name: name,
+                                p_project_type: type,
+                                p_budget_amount: budget,
+                                p_budget_code: bcode
+                            });
+                        }
                     }
                     if (!res.success) throw new Error(res.message);
-                    logger('UPDATE_ITEM', `แก้ไขข้อมูลรายการ [${bcode || '-'}] | รายการ: ${name}`);
+
+                    // Client safeguard update for budget_code2
+                    try {
+                        await sbClient.from('items').update({ budget_code2: bcode2 || null }).eq('id', itemId);
+                    } catch (errBcode2) {
+                        console.warn("Safeguard update budget_code2:", errBcode2);
+                    }
+
+                    // Update in-memory item
+                    const it = (state.items || state.projects || []).find(x => String(x.id) === String(itemId));
+                    if (it) {
+                        it.budget_code = bcode;
+                        it.budget_code2 = bcode2;
+                        it.item_name = name;
+                        it.project_name = name;
+                        it.item_type = type;
+                        it.project_type = type;
+                        it.budget_amount = budget;
+                    }
+                    if (state.selectedItem && String(state.selectedItem.id) === String(itemId)) {
+                        state.selectedItem.budget_code = bcode;
+                        state.selectedItem.budget_code2 = bcode2;
+                    }
+
+                    logger('UPDATE_ITEM', `แก้ไขข้อมูลรายการ [e-GP: ${bcode || '-'}, งบ: ${bcode2 || '-'}] | รายการ: ${name}`);
                     ui.closeModal();
                     ui.toast('แก้ไขข้อมูลรายการสำเร็จ', 'success');
                     pages.items(false);
@@ -3020,22 +3676,58 @@
                 let html = '';
                 top100.forEach((item, idx) => {
                     const rank = idx + 1;
-                    let rankBadge = `<div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm text-white/70 shrink-0">${rank}</div>`;
+                    const pct = Number(item.performance_pct) || 0;
+                    const isCompleted = pct >= 100 && item.completed_at;
+
+                    // Default badge (Rank 6 - 100 or 'worst' tab)
+                    let rankBadge = `<div class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center font-bold text-sm text-white/80 shrink-0 border border-white/10 shadow-inner">${rank}</div>`;
+                    let cardBorder = 'bg-white/5 hover:bg-white/10 border-white/10';
+
+                    // Top 1 - 5 Highlights (Active in 'best' tab)
                     if (window.leaderboardTab === 'best') {
-                        if (rank === 1) rankBadge = `<div class="w-9 h-9 rounded-full bg-yellow-400 flex items-center justify-center font-bold text-base text-yellow-900 shrink-0 shadow-[0_0_15px_rgba(250,204,21,0.5)]">1</div>`;
-                        else if (rank === 2) rankBadge = `<div class="w-9 h-9 rounded-full bg-slate-300 flex items-center justify-center font-bold text-base text-slate-800 shrink-0">2</div>`;
-                        else if (rank === 3) rankBadge = `<div class="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center font-bold text-base text-orange-900 shrink-0">3</div>`;
+                        if (rank === 1) {
+                            rankBadge = `<div class="w-11 h-11 rounded-2xl bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-500 flex flex-col items-center justify-center font-extrabold text-yellow-950 shrink-0 shadow-[0_0_20px_rgba(250,204,21,0.65)] border border-yellow-200"><span class="text-[11px] leading-none">👑</span><span class="text-sm leading-none mt-0.5 font-black">1</span></div>`;
+                            cardBorder = 'bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-white/5 border-yellow-400/50 shadow-lg shadow-yellow-500/10 ring-1 ring-yellow-400/30';
+                        } else if (rank === 2) {
+                            rankBadge = `<div class="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-100 via-slate-200 to-slate-400 flex flex-col items-center justify-center font-extrabold text-slate-800 shrink-0 shadow-md border border-white/80"><span class="text-[11px] leading-none">🥈</span><span class="text-sm leading-none mt-0.5 font-black">2</span></div>`;
+                            cardBorder = 'bg-gradient-to-r from-slate-300/20 via-slate-200/10 to-white/5 border-slate-300/40 shadow-md ring-1 ring-white/20';
+                        } else if (rank === 3) {
+                            rankBadge = `<div class="w-11 h-11 rounded-2xl bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 flex flex-col items-center justify-center font-extrabold text-amber-100 shrink-0 shadow-md border border-amber-500/70"><span class="text-[11px] leading-none">🥉</span><span class="text-sm leading-none mt-0.5 font-black">3</span></div>`;
+                            cardBorder = 'bg-gradient-to-r from-amber-700/20 via-amber-600/10 to-white/5 border-amber-600/40 shadow-md ring-1 ring-amber-500/20';
+                        } else if (rank === 4) {
+                            rankBadge = `<div class="w-11 h-11 rounded-2xl bg-gradient-to-b from-sky-400 via-blue-500 to-indigo-600 flex flex-col items-center justify-center font-extrabold text-white shrink-0 shadow-[0_0_15px_rgba(59,130,246,0.5)] border border-blue-300/60"><span class="text-[11px] leading-none">🎖️</span><span class="text-sm leading-none mt-0.5 font-black">4</span></div>`;
+                            cardBorder = 'bg-gradient-to-r from-blue-600/20 via-indigo-600/10 to-white/5 border-blue-400/40 shadow-md ring-1 ring-blue-400/20';
+                        } else if (rank === 5) {
+                            rankBadge = `<div class="w-11 h-11 rounded-2xl bg-gradient-to-b from-emerald-400 via-teal-500 to-emerald-600 flex flex-col items-center justify-center font-extrabold text-white shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.5)] border border-emerald-300/60"><span class="text-[11px] leading-none">🎖️</span><span class="text-sm leading-none mt-0.5 font-black">5</span></div>`;
+                            cardBorder = 'bg-gradient-to-r from-emerald-600/20 via-teal-600/10 to-white/5 border-emerald-400/40 shadow-md ring-1 ring-emerald-400/20';
+                        }
                     }
+
+                    // Format completion date badge
+                    let completionBadge = '';
+                    if (isCompleted) {
+                        completionBadge = `
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 shadow-sm mt-0.5 animate-pulse">
+                                <span>🏆</span> เบิกจ่ายครบ 100% เมื่อ: ${utils.formatDate(item.completed_at)}
+                            </div>
+                        `;
+                    }
+
                     html += `
-                        <div class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 sm:p-5 flex items-center gap-4 transition">
+                        <div class="${cardBorder} border rounded-2xl p-3.5 sm:p-4 flex items-center gap-3.5 transition-all duration-200 hover:scale-[1.01]">
                             ${rankBadge}
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-white text-[15px] sm:text-[17px] truncate" title="${item.institution_name}">${utils.esc(item.institution_name)}</h4>
-                                <div class="flex justify-between items-end mt-2 gap-3">
-                                    <div class="w-full bg-black/30 rounded-full h-2.5">
-                                        <div class="bg-gradient-to-r ${window.leaderboardTab === 'best' ? 'from-emerald-400 to-green-300' : 'from-red-500 to-orange-400'} h-2.5 rounded-full" style="width: ${item.performance_pct}%"></div>
-                                    </div>
-                                    <span class="text-[13px] font-mono font-bold text-white/90 shrink-0">${item.performance_pct}%</span>
+                            <div class="flex-1 min-w-0 space-y-1">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h4 class="font-bold text-white text-[15px] sm:text-[16px] truncate" title="${item.institution_name}">
+                                        ${utils.esc(item.institution_name)}
+                                    </h4>
+                                    <span class="text-sm sm:text-base font-mono font-extrabold text-white shrink-0 drop-shadow-sm">
+                                        ${pct.toFixed(2)}%
+                                    </span>
+                                </div>
+                                ${completionBadge}
+                                <div class="w-full bg-black/40 rounded-full h-2.5 mt-1.5 overflow-hidden shadow-inner border border-white/5">
+                                    <div class="bg-gradient-to-r ${window.leaderboardTab === 'best' ? 'from-emerald-400 to-green-300' : 'from-red-500 to-orange-400'} h-2.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, pct)}%"></div>
                                 </div>
                             </div>
                         </div>
@@ -3067,7 +3759,7 @@
                     state.currentRoute = route;
                     document.querySelectorAll('#main-nav button').forEach(b => {
                         b.classList.remove('bg-blue-100', 'text-primary', 'font-bold');
-                        if (b.dataset.nav === route || (route === 'items' && b.dataset.nav === 'items') || (route === 'projects' && b.dataset.nav === 'items') || (route === 'workflow' && (b.dataset.nav === 'items' || b.dataset.nav === 'projects')) || (route === 'management' && (b.dataset.nav === 'items' || b.dataset.nav === 'projects')) || (route === 'report' && b.dataset.nav === 'report')) {
+                        if (b.dataset.nav === route || (route === 'items' && b.dataset.nav === 'items') || (route === 'projects' && b.dataset.nav === 'items') || (route === 'workflow' && (b.dataset.nav === 'items' || b.dataset.nav === 'projects')) || (route === 'management' && (b.dataset.nav === 'items' || b.dataset.nav === 'projects')) || (route === 'report' && b.dataset.nav === 'report') || (route === 'announcement' && b.dataset.nav === 'announcement')) {
                             b.classList.add('bg-blue-100', 'text-primary', 'font-bold');
                         }
                     });
@@ -3083,6 +3775,7 @@
                         case 'users': pages.users(); break;
                         case 'audit': pages.audit(); break;
                         case 'report': pages.report(); break;
+                        case 'announcement': pages.announcement(); break;
                         default: pages.dashboard();
                     }
                 } catch (err) {
@@ -3090,17 +3783,19 @@
                 }
             },
             init: async () => {
+                ui.loadSavedColWidths();
                 try {
                     if (!window.supabase) throw new Error("ไม่สามารถโหลดไลบรารี Supabase ได้ (อินเทอร์เน็ตอาจบล็อกไฟล์)");
                     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                     if (window.Chart && window.ChartDataLabels) { Chart.register(ChartDataLabels); }
                 } catch (err) { alert("🚨 ข้อผิดพลาดระบบ: " + err.message); return; }
 
-                // ให้ทั้ง 2 ฟังก์ชันทำงานไปพร้อมกัน และรอจนเสร็จ เพื่อป้องกันการค้าง
+                // ให้ฟังก์ชันทำงานไปพร้อมกัน และรอจนเสร็จ เพื่อป้องกันการค้าง
                 try {
                     await Promise.all([
                         handlers.loadLoginUsers(),
-                        handlers.loadLeaderboard()
+                        handlers.loadLeaderboard(),
+                        handlers.loadLoginAnnouncement()
                     ]);
                 } catch (e) { }
 
