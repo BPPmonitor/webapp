@@ -117,6 +117,61 @@
             padding-bottom: 1rem !important;
         }
 
+        /* Sticky Columns for Dashboard and Report Tables */
+        .sticky-col-header {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 30 !important;
+            background-color: #f8fafc !important;
+            box-shadow: 2px 0 6px -2px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .sticky-col-cell {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 10 !important;
+            box-shadow: 2px 0 6px -2px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* Row Checked / Strikethrough Effect for Report Checklist */
+        tr.is-checked {
+            background-color: #f8fafc !important;
+            opacity: 0.65;
+            transition: opacity 0.2s, background-color 0.2s;
+        }
+
+        tr.is-checked td.col-sticky-manage {
+            background-color: #f8fafc !important;
+            opacity: 1 !important;
+        }
+
+        tr.is-checked:hover {
+            background-color: #f1f5f9 !important;
+        }
+
+        tr.is-checked:hover td.col-sticky-manage {
+            background-color: #f1f5f9 !important;
+        }
+
+        tr.is-checked td:not(.col-sticky-manage):not(.col-check) {
+            text-decoration: line-through !important;
+            text-decoration-thickness: 1.5px !important;
+            text-decoration-color: #64748b !important;
+            color: #94a3b8 !important;
+        }
+
+        tr.is-checked td:not(.col-sticky-manage):not(.col-check) p,
+        tr.is-checked td:not(.col-sticky-manage):not(.col-check) span,
+        tr.is-checked td:not(.col-sticky-manage):not(.col-check) div,
+        tr.is-checked td:not(.col-sticky-manage):not(.col-check) a,
+        tr.is-checked td:not(.col-sticky-manage):not(.col-check) b {
+            text-decoration: line-through !important;
+            text-decoration-thickness: 1.5px !important;
+            text-decoration-color: #64748b !important;
+            color: #94a3b8 !important;
+            border-color: #cbd5e1 !important;
+        }
+
         :root {
             --dash-col-bcode-w: 150px;
             --dash-col-inst-w: 190px;
@@ -470,6 +525,7 @@
             items: [], selectedItem: null, users: [], itemPage: 1, itemLimit: 10,
             auditPage: 1, auditLimit: 30, auditStartDate: '', auditEndDate: '', fiscalYear: null,
             availableYears: [], itemSearch: '', userSearch: '', auditSearch: '',
+            reportFilterState: null, workflowReturnRoute: 'items', reportScrollTop: 0, checkedReportItems: {},
             // Compatibility Aliases
             get projects() { return this.items; },
             set projects(v) { this.items = v; },
@@ -1003,7 +1059,7 @@
                                 <canvas id="filterStagesBarChart"></canvas>
                             </div>
                             <div class="overflow-x-auto max-h-[500px] rounded-xl border border-slate-200 shadow-sm custom-scrollbar">
-                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);"><div class="truncate pr-2">รหัสโครงการ e-GP</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--dash-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);"><div class="truncate pr-2">สถานศึกษา</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ontouchstart="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ondblclick="ui.resetColWidth(event, '--dash-col-inst-w', 190)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);"><div class="truncate pr-2">ชื่อรายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--dash-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold text-center border-r min-w-[190px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
+                                <table class="w-full text-left bg-white whitespace-nowrap border-separate border-spacing-0"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[100px] sticky-col-header bg-slate-50 border-b border-slate-200">จัดการ</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);"><div class="truncate pr-2">รหัสโครงการ e-GP</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--dash-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);"><div class="truncate pr-2">สถานศึกษา</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ontouchstart="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ondblclick="ui.resetColWidth(event, '--dash-col-inst-w', 190)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);"><div class="truncate pr-2">ชื่อรายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--dash-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold text-center border-r min-w-[190px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
                             </div>
                             <div class="flex justify-between items-center text-xs text-gray-500 pt-2"><span id="tableCount">แสดง 0 รายการ</span></div>
                         </section>`;
@@ -1107,6 +1163,19 @@
                     const itemTypes = [...new Set(items.map(p => p.item_type).filter(Boolean))].sort();
                     const institutions = [...new Set(items.map(p => p.institution_name).filter(Boolean))].sort();
 
+                    const saved = state.reportFilterState || (sessionStorage.getItem('stips_report_filters') ? JSON.parse(sessionStorage.getItem('stips_report_filters')) : null) || {};
+                    const curSearch = saved.search || '';
+                    const curYear = (saved.year !== undefined && saved.year !== null) ? String(saved.year) : (state.fiscalYear ? String(state.fiscalYear) : '');
+                    const curProv = saved.province || '';
+                    const curType = saved.itemType || '';
+                    const curInst = saved.institution || '';
+                    const curStatus = (saved.status !== undefined && saved.status !== null) ? String(saved.status) : '';
+                    const curGroup = saved.groupBy || '';
+                    const curMinBud = (saved.minBudget !== null && saved.minBudget !== undefined) ? saved.minBudget : '';
+                    const curMaxBud = (saved.maxBudget !== null && saved.maxBudget !== undefined) ? saved.maxBudget : '';
+                    const curExpMonth = Boolean(saved.expMonth);
+                    const hasAdvFilter = Boolean(curMinBud || curMaxBud || curExpMonth);
+
                     let html = `
                         <div class="mb-6"><h2 class="text-2xl font-bold text-slate-800 tracking-tight">รายงานผลการดำเนินงาน</h2><p class="text-sm text-slate-500 mt-1">สรุปข้อมูลรายการและสถานะการเบิกจ่าย</p></div>
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">
@@ -1126,39 +1195,43 @@
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
                                 <div class="relative xl:col-span-2">
-                                    <input type="text" id="rep_search" oninput="handlers.debounceReportFilters()" onkeydown="if(event.key==='Enter') handlers.applyReportFilters()" placeholder="🔍 ค้นหาครอบคลุมทั้งหมด, ขั้นตอนที่แล้วเสร็จ..." class="border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm outline-none w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
-                                    <button id="clear_rep_search" onclick="handlers.clearReportSearch()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold hidden" title="ล้างการค้นหา">✕</button>
+                                    <input type="text" id="rep_search" value="${utils.esc(curSearch)}" oninput="handlers.debounceReportFilters()" onkeydown="if(event.key==='Enter') handlers.applyReportFilters()" placeholder="🔍 ค้นหาครอบคลุมทั้งหมด, ขั้นตอนที่แล้วเสร็จ..." class="border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm outline-none w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                                    <button id="clear_rep_search" onclick="handlers.clearReportSearch()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold ${curSearch ? '' : 'hidden'}" title="ล้างการค้นหา">✕</button>
                                 </div>
-                                <select id="rep_year" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกปีงบประมาณ</option>${state.availableYears.map(y => `<option value="${y}" ${y === state.fiscalYear ? 'selected' : ''}>ปี ${y}</option>`).join('')}</select>
-                                <select id="rep_province" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกจังหวัด</option>${provinces.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
-                                <select id="rep_type" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกประเภท</option>${itemTypes.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
-                                <select id="rep_inst" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกสถานศึกษา</option>${institutions.map(i => `<option value="${i}">${i}</option>`).join('')}</select>
-                                <select id="rep_status" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกขั้นตอนที่แล้วเสร็จ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${utils.getFilterStatusLabel(s)}</option>`).join('')}</select>
-                                <select id="rep_group" onchange="handlers.applyReportFilters()" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none"><option value="">(ไม่จัดกลุ่ม)</option><option value="province">จัดกลุ่ม: จังหวัด</option><option value="plan_type">จัดกลุ่ม: โครงการ</option><option value="institution_name">จัดกลุ่ม: สถานศึกษา</option><option value="current_status">จัดกลุ่ม: ขั้นตอนที่แล้วเสร็จ</option></select>
+                                <select id="rep_year" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curYear === '' ? 'selected' : ''}>ทุกปีงบประมาณ</option>${state.availableYears.map(y => `<option value="${y}" ${String(y) === curYear ? 'selected' : ''}>ปี ${y}</option>`).join('')}</select>
+                                <select id="rep_province" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curProv === '' ? 'selected' : ''}>ทุกจังหวัด</option>${provinces.map(p => `<option value="${p}" ${p === curProv ? 'selected' : ''}>${p}</option>`).join('')}</select>
+                                <select id="rep_type" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curType === '' ? 'selected' : ''}>ทุกประเภท</option>${itemTypes.map(t => `<option value="${t}" ${t === curType ? 'selected' : ''}>${t}</option>`).join('')}</select>
+                                <select id="rep_inst" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curInst === '' ? 'selected' : ''}>ทุกสถานศึกษา</option>${institutions.map(i => `<option value="${i}" ${i === curInst ? 'selected' : ''}>${i}</option>`).join('')}</select>
+                                <select id="rep_status" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curStatus === '' ? 'selected' : ''}>ทุกขั้นตอนที่แล้วเสร็จ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}" ${String(s) === curStatus ? 'selected' : ''}>${utils.getFilterStatusLabel(s)}</option>`).join('')}</select>
+                                <select id="rep_group" onchange="handlers.applyReportFilters()" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curGroup === '' ? 'selected' : ''}>(ไม่จัดกลุ่ม)</option><option value="province" ${curGroup === 'province' ? 'selected' : ''}>จัดกลุ่ม: จังหวัด</option><option value="plan_type" ${curGroup === 'plan_type' ? 'selected' : ''}>จัดกลุ่ม: โครงการ</option><option value="institution_name" ${curGroup === 'institution_name' ? 'selected' : ''}>จัดกลุ่ม: สถานศึกษา</option><option value="current_status" ${curGroup === 'current_status' ? 'selected' : ''}>จัดกลุ่ม: ขั้นตอนที่แล้วเสร็จ</option></select>
                             </div>
 
-                            <div id="advanced_filters" class="hidden p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div id="advanced_filters" class="${hasAdvFilter ? '' : 'hidden'} p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1">งบประมาณขั้นต่ำ (บาท)</label>
-                                    <input type="number" id="rep_min_budget" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
+                                    <input type="number" id="rep_min_budget" value="${curMinBud !== '' ? curMinBud : ''}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1">งบประมาณสูงสุด (บาท)</label>
-                                    <input type="number" id="rep_max_budget" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
+                                    <input type="number" id="rep_max_budget" value="${curMaxBud !== '' ? curMaxBud : ''}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
                                 </div>
                                 <div class="flex items-end">
                                     <label class="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer p-2 border border-slate-200 rounded-lg w-full bg-white hover:bg-slate-50">
-                                        <input type="checkbox" id="rep_expire_this_month" class="w-4 h-4 accent-primary">
+                                        <input type="checkbox" id="rep_expire_this_month" ${curExpMonth ? 'checked' : ''} class="w-4 h-4 accent-primary">
                                         สัญญาหมดอายุภายในเดือนนี้
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="flex gap-2"><button onclick="handlers.applyReportFilters()" class="bg-primary text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 shadow-sm flex items-center gap-2"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> ค้นหาข้อมูล</button><button onclick="handlers.exportReportExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Export Excel</button></div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button onclick="handlers.applyReportFilters()" class="bg-primary text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 shadow-sm flex items-center gap-2 transition active:scale-95"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> ค้นหาข้อมูล</button>
+                                <button onclick="handlers.resetReportFilters()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-4 py-2 rounded-xl text-sm font-medium shadow-xs flex items-center gap-1.5 transition active:scale-95" title="ล้างตัวกรองทั้งหมดกลับเป็นค่าเริ่มต้น"><span>🔄</span> ล้างตัวกรอง</button>
+                                <button onclick="handlers.exportReportExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2 transition active:scale-95"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Export Excel</button>
+                            </div>
                         </div>
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
                             <div class="overflow-x-auto h-[75vh] custom-scrollbar">
-                                <table class="w-full min-w-max text-left whitespace-nowrap text-sm"><thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm border-b border-slate-200 z-20" id="reportTableHead"></thead><tbody id="reportTableBody" class="divide-y divide-slate-100"></tbody><tfoot class="bg-slate-50 font-bold sticky bottom-0 border-t border-slate-200 shadow-[0_-2px_4px_rgba(0,0,0,0.02)] z-20" id="reportTableFoot"></tfoot></table>
+                                <table class="w-full min-w-max text-left whitespace-nowrap text-sm border-separate border-spacing-0"><thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm border-b border-slate-200 z-20" id="reportTableHead"></thead><tbody id="reportTableBody" class="divide-y divide-slate-100"></tbody><tfoot class="bg-slate-50 font-bold sticky bottom-0 border-t border-slate-200 shadow-[0_-2px_4px_rgba(0,0,0,0.02)] z-20" id="reportTableFoot"></tfoot></table>
                             </div>
                             <div class="p-3 text-xs text-slate-500 bg-slate-50 border-t border-slate-100 flex justify-between" id="reportCount"></div>
                         </div>`;
@@ -1243,8 +1316,10 @@
                     const curBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs rounded-xl border shadow-xs ${curBadgeClass}">${flow.isCompleted8 ? '✨' : flow.isManagingContract ? '📋' : '●'} ขั้นตอนปัจจุบัน: ${utils.esc(flow.currentName)}</span>`;
 
                     const itemName = p.item_name || p.project_name || '';
+                    const returnRoute = state.workflowReturnRoute || 'items';
+                    const returnLabel = returnRoute === 'report' ? 'หน้ารายงานผล' : returnRoute === 'dashboard' ? 'หน้าแดชบอร์ด' : 'หน้ารายการ';
                     let html = `<div class="mb-6">
-                        <button onclick="app.navigate('items')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้ารายการ</button>
+                        <button onclick="app.navigate('${returnRoute}')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับ${returnLabel}</button>
                         <h2 class="text-2xl font-bold text-slate-800">สถานะการรายงานผล (ติดตามขั้นตอนรายการ)</h2>
                         
                         <div class="mt-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
@@ -2115,8 +2190,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     let tCol = (r.type === 'ที่ดิน/สิ่งก่อสร้าง' || r.type === 'สิ่งก่อสร้าง') ? 'bg-slate-700 text-white' : 'bg-purple-600 text-white';
                     const doneBadge = utils.renderStatusBadge(r.statusNo, r.poAmount, r.disbursed);
 
-                    html += `<tr class="hover:bg-blue-50/40 transition">
-                        <td class="p-3 text-center border-r border-slate-100"><button onclick="app.navigate('workflow','${r.id}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap font-medium">รายงานผล →</button></td>
+                    html += `<tr class="hover:bg-blue-50/40 transition group">
+                        <td class="p-3 text-center border-r border-slate-100 sticky-col-cell bg-white group-hover:bg-blue-50/50 whitespace-nowrap"><button onclick="app.navigate('workflow','${r.id}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap font-medium">รายงานผล →</button></td>
                         <td class="p-3 font-mono text-sm font-bold text-indigo-600 border-r border-slate-100" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);">
                             <div class="truncate" title="รหัสโครงการ e-GP: ${utils.esc(r.budgetCode)}">${utils.esc(r.budgetCode) || '-'}</div>
                             ${r.budgetCode2 ? `<div class="text-[11px] font-normal text-emerald-700 truncate mt-0.5" title="รหัสงบประมาณ: ${utils.esc(r.budgetCode2)}">งบ: ${utils.esc(r.budgetCode2)}</div>` : ''}
@@ -2578,6 +2653,54 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 if (clearBtn) clearBtn.classList.add('hidden');
                 handlers.applyReportFilters();
             },
+            resetReportFilters: () => {
+                state.reportFilterState = {
+                    search: '',
+                    year: state.fiscalYear || '',
+                    province: '',
+                    itemType: '',
+                    institution: '',
+                    status: '',
+                    groupBy: '',
+                    minBudget: null,
+                    maxBudget: null,
+                    expMonth: false
+                };
+                state.reportScrollTop = 0;
+                try {
+                    sessionStorage.removeItem('stips_report_filters');
+                } catch (e) {}
+                pages.report();
+                ui.toast('ล้างตัวกรองรายงานผลเรียบร้อยแล้ว', 'info');
+            },
+
+            toggleReportCheckRow: (checkbox, itemId) => {
+                if (!state.checkedReportItems) state.checkedReportItems = {};
+                const checked = checkbox.checked;
+                state.checkedReportItems[itemId] = checked;
+                const tr = checkbox.closest('tr');
+                if (tr) {
+                    if (checked) {
+                        tr.classList.add('is-checked');
+                    } else {
+                        tr.classList.remove('is-checked');
+                    }
+                }
+            },
+            toggleAllReportChecks: (checked) => {
+                if (!state.checkedReportItems) state.checkedReportItems = {};
+                const checkboxes = document.querySelectorAll('#reportTableBody input.row-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = checked;
+                    const id = cb.dataset.id;
+                    if (id) state.checkedReportItems[id] = checked;
+                    const tr = cb.closest('tr');
+                    if (tr) {
+                        if (checked) tr.classList.add('is-checked');
+                        else tr.classList.remove('is-checked');
+                    }
+                });
+            },
 
             applyReportFilters: () => {
                 const defaultCols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_bcode2', 'col_inst', 'col_item', 'col_stat_done', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
@@ -2586,7 +2709,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     if (window.reportColsState[c] === undefined) window.reportColsState[c] = true;
                 });
 
-                const search = (document.getElementById('rep_search')?.value || '').toLowerCase().trim();
+                const rawSearch = document.getElementById('rep_search')?.value || '';
+                const search = rawSearch.toLowerCase().trim();
                 const year = document.getElementById('rep_year')?.value || '';
                 const province = document.getElementById('rep_province')?.value || '';
                 const itemTypeVal = document.getElementById('rep_type')?.value || '';
@@ -2595,7 +2719,24 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 const groupBy = document.getElementById('rep_group')?.value || '';
                 const minBudStr = document.getElementById('rep_min_budget')?.value;
                 const maxBudStr = document.getElementById('rep_max_budget')?.value;
-                const expMonth = document.getElementById('rep_expire_this_month')?.checked;
+                const expMonth = !!document.getElementById('rep_expire_this_month')?.checked;
+
+                // Persist report filter state for auto-restore
+                state.reportFilterState = {
+                    search: rawSearch,
+                    year: year,
+                    province: province,
+                    itemType: itemTypeVal,
+                    institution: inst,
+                    status: status,
+                    groupBy: groupBy,
+                    minBudget: minBudStr !== '' && minBudStr !== undefined ? minBudStr : null,
+                    maxBudget: maxBudStr !== '' && maxBudStr !== undefined ? maxBudStr : null,
+                    expMonth: expMonth
+                };
+                try {
+                    sessionStorage.setItem('stips_report_filters', JSON.stringify(state.reportFilterState));
+                } catch (e) {}
 
                 const minBudget = minBudStr ? Number(minBudStr) : null;
                 const maxBudget = maxBudStr ? Number(maxBudStr) : null;
@@ -2638,10 +2779,12 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     return matchYear && matchSearch && matchProv && matchType && matchInst && matchStatus && matchMin && matchMax && matchExpMonth;
                 });
 
+                window._currentFilteredReport = filtered;
+
                 const cols = window.reportColsState;
                 let thead = '<tr>';
-                if (cols.col_manage) thead += `<th class="p-3 font-semibold text-center border-r min-w-[160px]">จัดการ / ข้อมูล</th>`;
-                thead += `<th class="p-3 font-semibold border-r text-center w-12 bg-slate-50">✔</th>`;
+                if (cols.col_manage) thead += `<th class="p-3 font-semibold text-center border-r border-b border-slate-200 min-w-[160px] sticky-col-header bg-slate-50">จัดการ / ข้อมูล</th>`;
+                thead += `<th class="p-3 font-semibold border-r border-b border-slate-200 text-center w-12 bg-slate-50 col-check"><input type="checkbox" onchange="handlers.toggleAllReportChecks(this.checked)" class="w-4 h-4 cursor-pointer accent-primary rounded shadow-sm" title="ติ๊กทั้งหมด / ยกเลิกทั้งหมด"></th>`;
                 if (cols.col_year) thead += `<th class="p-3 font-semibold border-r text-center min-w-[80px]">ปีงบฯ</th>`;
                 if (cols.col_type) thead += `<th class="p-3 font-semibold border-r text-center min-w-[100px]">ประเภท</th>`;
                 if (cols.col_prov) thead += `<th class="p-3 font-semibold border-r min-w-[100px]">จังหวัด</th>`;
@@ -2699,15 +2842,19 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     const isDelayed = p.current_status < 8 && p.contract_end_date && new Date(p.contract_end_date) < new Date();
                     const isCompleted = b > 0 && dis >= b;
 
-                    let trClass = 'hover:bg-blue-50/50 transition bg-white';
+                    const isChecked = state.checkedReportItems && !!state.checkedReportItems[p.id];
+
+                    let trClass = 'hover:bg-blue-50/50 transition bg-white group';
                     let stickBg = 'bg-white group-hover:bg-blue-50/50';
                     if (isDelayed) { trClass = 'hover:bg-red-50/80 transition bg-red-50/40 text-red-900 group'; stickBg = 'bg-[#fef2f2] group-hover:bg-[#fef2f2]'; }
                     else if (isCompleted) { trClass = 'hover:bg-green-50/80 transition bg-green-50/40 text-green-900 group'; stickBg = 'bg-[#f0fdf4] group-hover:bg-[#f0fdf4]'; }
                     else { trClass = 'hover:bg-blue-50/50 transition bg-white group'; }
 
+                    if (isChecked) trClass += ' is-checked';
+
                     let row = `<tr class="${trClass}">`;
-                    if (cols.col_manage) row += `<td class="p-3 text-center border-r border-slate-100 whitespace-nowrap"><div class="flex items-center justify-center gap-1.5"><button onclick="handlers.openQuickPreview('${p.id}')" title="เปิดดูข้อมูลสรุปย่อและสถิติ" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1"><span>👁️</span> สรุปย่อ</button><button onclick="app.navigate('workflow', '${p.id}')" title="เข้าสู่หน้ารายงานผลขั้นตอน" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1.5 rounded-lg transition shadow-sm font-medium">รายงานผล →</button></div></td>`;
-                    row += `<td class="p-3 text-center border-r border-slate-100"><input type="checkbox" class="w-4 h-4 cursor-pointer accent-primary rounded shadow-sm"></td>`;
+                    if (cols.col_manage) row += `<td class="p-3 text-center border-r border-slate-100 whitespace-nowrap sticky-col-cell col-sticky-manage ${stickBg}"><div class="flex items-center justify-center gap-1.5"><button onclick="handlers.openQuickPreview('${p.id}')" title="เปิดดูข้อมูลสรุปย่อและสถิติ" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1"><span>👁️</span> สรุปย่อ</button><button onclick="app.navigate('workflow', '${p.id}')" title="เข้าสู่หน้ารายงานผลขั้นตอน" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1.5 rounded-lg transition shadow-sm font-medium">รายงานผล →</button></div></td>`;
+                    row += `<td class="p-3 text-center border-r border-slate-100 col-check"><input type="checkbox" data-id="${p.id}" onchange="handlers.toggleReportCheckRow(this, '${p.id}')" ${isChecked ? 'checked' : ''} class="row-checkbox w-4 h-4 cursor-pointer accent-primary rounded shadow-sm" title="คลิกเพื่อตรวจเช็ก / ขีดเส้นทับรายการนี้"></td>`;
                     if (cols.col_year) row += `<td class="p-3 text-center font-bold text-slate-700 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.fiscal_year || '-')}</td>`;
                     if (cols.col_type) row += `<td class="p-3 text-center text-slate-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.item_type || '-')}</td>`;
                     if (cols.col_prov) row += `<td class="p-3 text-slate-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.province || '-')}</td>`;
@@ -2801,6 +2948,14 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
 
                     document.getElementById('reportTableFoot').innerHTML = tfoot;
                     document.getElementById('reportCount').innerText = `แสดงผล ${filtered.length} รายการ`;
+
+                    if (state.reportScrollTop > 0) {
+                        const targetScroll = state.reportScrollTop;
+                        setTimeout(() => {
+                            const sc = document.querySelector('.custom-scrollbar');
+                            if (sc) sc.scrollTop = targetScroll;
+                        }, 50);
+                    }
                 }
             },
 
@@ -4154,6 +4309,15 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             },
             navigate: (route, param = null) => {
                 try {
+                    if (route === 'workflow' || route === 'management') {
+                        if (state.currentRoute !== 'workflow' && state.currentRoute !== 'management') {
+                            state.workflowReturnRoute = state.currentRoute || 'items';
+                            if (state.currentRoute === 'report') {
+                                const sc = document.querySelector('.custom-scrollbar');
+                                if (sc) state.reportScrollTop = sc.scrollTop;
+                            }
+                        }
+                    }
                     state.currentRoute = route;
                     document.querySelectorAll('#main-nav button').forEach(b => {
                         b.classList.remove('bg-blue-100', 'text-primary', 'font-bold');
