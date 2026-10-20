@@ -512,6 +512,110 @@
                 return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
             },
             getStatusName: (s) => ({ 1: 'ยังไม่ดำเนินการ', 2: 'จัดทำร่าง TOR', 3: 'เผยแพร่ร่าง TOR', 4: 'ประกาศเชิญชวน', 5: 'ประกาศผู้ชนะ', 6: 'รอผลอุทธรณ์', 7: 'ลงนามสัญญา', 8: 'บริหารสัญญา' })[s] || 'ไม่ทราบ',
+            getFilterStatusLabel: (s) => ({
+                1: 'ยังไม่เริ่มดำเนินการ',
+                2: 'เตรียมจัดทำ TOR',
+                3: 'จัดทำ TOR แล้ว',
+                4: 'เผยแพร่ TOR แล้ว',
+                5: 'ประกาศเชิญชวนแล้ว',
+                6: 'ประกาศผู้ชนะแล้ว',
+                7: 'ผ่านขั้นตอนอุทธรณ์แล้ว',
+                8: 'ลงนามสัญญาแล้ว'
+            })[s] || `สถานะ ${s}`,
+            getStageIndex: (p) => {
+                const s = parseInt(p.statusNo !== undefined ? p.statusNo : p.current_status, 10) || 1;
+                const po = Number(p.poAmount !== undefined ? p.poAmount : p.po_amount) || 0;
+                const dis = Number(p.disbursed !== undefined ? p.disbursed : p.disbursed_amount) || 0;
+                if (s === 8) {
+                    if (po > 0 && dis >= po) return 8; // เสร็จสิ้นโครงการ
+                    return 7; // ลงนามสัญญาแล้ว
+                }
+                if (s >= 1 && s <= 7) return s - 1;
+                return 0;
+            },
+            STAGE_LABELS: [
+                'ยังไม่เริ่มดำเนินการ',
+                'เตรียมจัดทำ TOR',
+                'จัดทำ TOR แล้ว',
+                'เผยแพร่ TOR แล้ว',
+                'ประกาศเชิญชวนแล้ว',
+                'ประกาศผู้ชนะแล้ว',
+                'ผ่านขั้นตอนอุทธรณ์แล้ว',
+                'ลงนามสัญญาแล้ว',
+                'เสร็จสิ้นโครงการ'
+            ],
+            renderStatusBadge: (currentStatus, poAmount = 0, disbursed = 0) => {
+                const s = parseInt(currentStatus, 10) || 1;
+                const flow = utils.getStepFlow(s, poAmount, disbursed);
+                let badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                let badgeIcon = '✓';
+                if (flow.isCompleted8) {
+                    badgeClass = 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold';
+                    badgeIcon = '✨';
+                } else if (s === 1) {
+                    badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+                    badgeIcon = '⚪';
+                } else if (s === 2) {
+                    badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                    badgeIcon = '●';
+                }
+                return `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-xs ${badgeClass} whitespace-nowrap">${badgeIcon} ${utils.esc(flow.completedName)}</span>`;
+            },
+            getStepFlow: (currentStatus, poAmount = 0, disbursed = 0) => {
+                const s = parseInt(currentStatus, 10) || 1;
+                const po = Number(poAmount) || 0;
+                const dis = Number(disbursed) || 0;
+                const isCompleted8 = (s === 8 && po > 0 && dis >= po);
+
+                let completedStep = s > 1 ? (s - 1) : 1;
+                let completedName = '';
+                let currentStep = s;
+                let currentName = '';
+
+                if (s === 1) {
+                    completedName = 'ยังไม่เริ่มดำเนินการ';
+                    currentName = 'เตรียมจัดทำ TOR';
+                } else if (s === 2) {
+                    completedName = 'เตรียมจัดทำ TOR';
+                    currentName = 'กำลังจัดทำร่าง TOR';
+                } else if (s === 3) {
+                    completedName = 'จัดทำ TOR แล้ว';
+                    currentName = 'เตรียมเผยแพร่ร่าง TOR';
+                } else if (s === 4) {
+                    completedName = 'เผยแพร่ TOR แล้ว';
+                    currentName = 'เตรียมประกาศเชิญชวน';
+                } else if (s === 5) {
+                    completedName = 'ประกาศเชิญชวนแล้ว';
+                    currentName = 'รอประกาศผู้ชนะ';
+                } else if (s === 6) {
+                    completedName = 'ประกาศผู้ชนะแล้ว';
+                    currentName = 'กำลังรอผลอุทธรณ์';
+                } else if (s === 7) {
+                    completedName = 'ผ่านขั้นตอนอุทธรณ์แล้ว';
+                    currentName = 'รอลงนามสัญญา';
+                } else if (s === 8) {
+                    if (isCompleted8) {
+                        completedStep = 8;
+                        completedName = 'เสร็จสิ้นโครงการ';
+                        currentName = 'เสร็จสิ้นโครงการ';
+                    } else {
+                        completedStep = 7;
+                        completedName = 'ลงนามสัญญาแล้ว';
+                        currentName = 'รอเบิกจ่าย';
+                    }
+                } else {
+                    completedName = '-';
+                    currentName = 'ไม่ทราบ';
+                }
+
+                return {
+                    completedStep,
+                    completedName,
+                    currentStep,
+                    currentName,
+                    isCompleted8
+                };
+            },
             getStatusColor: (s) => ({
                 1: 'bg-red-50 text-red-700 border-red-200',
                 2: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -877,8 +981,8 @@
                                 <div><h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><svg class="w-5 h-5 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>ภาพรวมผลการใช้จ่ายงบประมาณ</h3><p class="text-xs text-gray-500 mt-0.5">รวมข้อมูลสิ่งก่อสร้างและครุภัณฑ์ทั้งหมดในระบบ</p></div>
                                 <div class="flex flex-wrap gap-2 w-full xl:w-auto">
                                     <select id="filterSheet" onchange="handlers.applyDashFilters()" class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none"><option value="ALL">📂 ทุกประเภท</option><option value="ที่ดิน/สิ่งก่อสร้าง">🏗️ ที่ดิน/สิ่งก่อสร้าง</option><option value="ครุภัณฑ์">🖥️ ครุภัณฑ์</option></select>
-                                    <select id="filterStatus" onchange="handlers.applyDashFilters()" class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none max-w-xs"><option value="ALL">🔄 ทุกสถานะดำเนินการ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${s}. ${utils.getStatusName(s)}</option>`).join('')}</select>
-                                    <input type="text" id="searchInput" oninput="handlers.applyDashFilters()" placeholder="🔍 ค้นหา สถานศึกษา, รายการ..." class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none w-full sm:w-64">
+                                    <select id="filterStatus" onchange="handlers.applyDashFilters()" class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none max-w-sm"><option value="ALL">🔄 ทุกขั้นตอนที่แล้วเสร็จ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${utils.getFilterStatusLabel(s)}</option>`).join('')}</select>
+                                    <input type="text" id="searchInput" oninput="handlers.applyDashFilters()" placeholder="🔍 ค้นหา สถานศึกษา, รายการ, ขั้นตอน..." class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-3 py-2 outline-none w-full sm:w-64">
                                 </div>
                             </div>
                             <div id="filterCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 my-4">
@@ -888,7 +992,7 @@
                                 <canvas id="filterStagesBarChart"></canvas>
                             </div>
                             <div class="overflow-x-auto max-h-[500px] rounded-xl border border-slate-200 shadow-sm custom-scrollbar">
-                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);"><div class="truncate pr-2">รหัสโครงการ e-GP</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--dash-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);"><div class="truncate pr-2">สถานศึกษา</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ontouchstart="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ondblclick="ui.resetColWidth(event, '--dash-col-inst-w', 190)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);"><div class="truncate pr-2">ชื่อรายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--dash-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold text-center border-r min-w-[130px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
+                                <table class="w-full text-left bg-white whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 text-[13px] sticky top-0 z-10 border-b border-slate-200"><tr><th class="p-3 font-semibold text-center border-r min-w-[80px]">จัดการ</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);"><div class="truncate pr-2">รหัสโครงการ e-GP</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--dash-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--dash-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r">ประเภท</th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);"><div class="truncate pr-2">สถานศึกษา</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ontouchstart="ui.initColResize(event, '--dash-col-inst-w', 100, 600)" ondblclick="ui.resetColWidth(event, '--dash-col-inst-w', 190)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold border-r relative select-none" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);"><div class="truncate pr-2">ชื่อรายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--dash-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--dash-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th><th class="p-3 font-semibold text-center border-r min-w-[190px]">สถานะ</th><th class="p-3 font-semibold text-right border-r">งบประมาณ</th><th class="p-3 font-semibold text-right border-r">ลงนามสัญญา</th><th class="p-3 font-semibold text-right border-r bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th><th class="p-3 font-semibold text-right border-r">เบิกจ่ายแล้ว</th><th class="p-3 font-semibold text-right border-r bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th><th class="p-3 font-semibold text-right border-r bg-purple-50/60 text-purple-900" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th><th class="p-3 font-semibold text-center border-r">เริ่มสัญญา</th><th class="p-3 font-semibold text-center border-r min-w-[135px]">สิ้นสุดสัญญา</th><th class="p-3 font-semibold text-center">งวดงาน</th></tr></thead><tbody id="dashTableBody" class="text-sm divide-y divide-slate-100"></tbody></table>
                             </div>
                             <div class="flex justify-between items-center text-xs text-gray-500 pt-2"><span id="tableCount">แสดง 0 รายการ</span></div>
                         </section>`;
@@ -1011,15 +1115,15 @@
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
                                 <div class="relative xl:col-span-2">
-                                    <input type="text" id="rep_search" oninput="handlers.debounceReportFilters()" onkeydown="if(event.key==='Enter') handlers.applyReportFilters()" placeholder="🔍 ค้นหาครอบคลุมทั้งหมด..." class="border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm outline-none w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                                    <input type="text" id="rep_search" oninput="handlers.debounceReportFilters()" onkeydown="if(event.key==='Enter') handlers.applyReportFilters()" placeholder="🔍 ค้นหาครอบคลุมทั้งหมด, ขั้นตอนที่แล้วเสร็จ..." class="border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm outline-none w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
                                     <button id="clear_rep_search" onclick="handlers.clearReportSearch()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold hidden" title="ล้างการค้นหา">✕</button>
                                 </div>
                                 <select id="rep_year" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกปีงบประมาณ</option>${state.availableYears.map(y => `<option value="${y}" ${y === state.fiscalYear ? 'selected' : ''}>ปี ${y}</option>`).join('')}</select>
                                 <select id="rep_province" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกจังหวัด</option>${provinces.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
                                 <select id="rep_type" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกประเภท</option>${itemTypes.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
                                 <select id="rep_inst" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกสถานศึกษา</option>${institutions.map(i => `<option value="${i}">${i}</option>`).join('')}</select>
-                                <select id="rep_status" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกสถานะ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${s}. ${utils.getStatusName(s)}</option>`).join('')}</select>
-                                <select id="rep_group" onchange="handlers.applyReportFilters()" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none"><option value="">(ไม่จัดกลุ่ม)</option><option value="province">จัดกลุ่ม: จังหวัด</option><option value="plan_type">จัดกลุ่ม: โครงการ</option><option value="institution_name">จัดกลุ่ม: สถานศึกษา</option><option value="current_status">จัดกลุ่ม: สถานะ</option></select>
+                                <select id="rep_status" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="">ทุกขั้นตอนที่แล้วเสร็จ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">${utils.getFilterStatusLabel(s)}</option>`).join('')}</select>
+                                <select id="rep_group" onchange="handlers.applyReportFilters()" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none"><option value="">(ไม่จัดกลุ่ม)</option><option value="province">จัดกลุ่ม: จังหวัด</option><option value="plan_type">จัดกลุ่ม: โครงการ</option><option value="institution_name">จัดกลุ่ม: สถานศึกษา</option><option value="current_status">จัดกลุ่ม: ขั้นตอนที่แล้วเสร็จ</option></select>
                             </div>
 
                             <div id="advanced_filters" class="hidden p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1121,9 +1225,14 @@
                     const wfHistory = wfRes.data || []; const appealData = appRes.data ? appRes.data[0] : null; const contractData = contRes.data ? contRes.data[0] : null;
                     const latestWf = {}; wfHistory.forEach(w => { if (!latestWf[w.status_no]) latestWf[w.status_no] = w; });
                     state.selectedItem = p; const curStat = parseInt(p.current_status, 10) || 1; const parseJSON = (str) => { try { return JSON.parse(str); } catch (e) { return null; } };
+                    const flow = utils.getStepFlow(curStat, p.po_amount, p.disbursed_amount);
+                    const isInitDone = (flow.completedStep === 1 && curStat <= 2);
+                    const doneBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs font-bold rounded-xl border shadow-xs ${isInitDone ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}">${isInitDone ? '⚪' : '✓'} ${utils.esc(flow.completedName)}</span>`;
+                    const curBadgeClass = flow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : `${utils.getStatusColor(flow.currentStep)} font-bold`;
+                    const curBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs rounded-xl border shadow-xs ${curBadgeClass}">${flow.isCompleted8 ? '✨' : '●'} ขั้นตอนปัจจุบัน: ${utils.esc(flow.currentName)}</span>`;
 
                     const itemName = p.item_name || p.project_name || '';
-                    let html = `<div class="mb-6"><button onclick="app.navigate('items')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้ารายการ</button><h2 class="text-2xl font-bold text-slate-800">สถานะการรายงานผล (ติดตามขั้นตอนรายการ)</h2><div class="mt-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-slate-800 text-sm font-medium flex flex-wrap items-center gap-2">${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded text-indigo-800 font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัส e-GP</span>`}${p.budget_code2 ? `<span class="font-mono bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded text-blue-700 font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''} <span>${utils.esc(itemName)}</span></p></div></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2"><div class="bg-white rounded-3xl border border-slate-100 p-5 sm:p-8 mb-6 shadow-sm"><div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 border-b border-slate-100 pb-5"><h3 class="font-bold text-lg text-slate-800">ความก้าวหน้าดำเนินงาน(อยู่ขั้นตอน)</h3><span class="px-4 py-1.5 text-xs rounded-full border ${utils.getStatusColor(curStat)} font-bold shadow-sm">ปัจจุบัน: สถานะ ${curStat}</span></div><div class="space-y-2">`;
+                    let html = `<div class="mb-6"><button onclick="app.navigate('items')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้ารายการ</button><h2 class="text-2xl font-bold text-slate-800">สถานะการรายงานผล (ติดตามขั้นตอนรายการ)</h2><div class="mt-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-slate-800 text-sm font-medium flex flex-wrap items-center gap-2">${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded text-indigo-800 font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัส e-GP</span>`}${p.budget_code2 ? `<span class="font-mono bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded text-blue-700 font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''} <span>${utils.esc(itemName)}</span></p></div></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2"><div class="bg-white rounded-3xl border border-slate-100 p-5 sm:p-8 mb-6 shadow-sm"><div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 border-b border-slate-100 pb-5"><div><h3 class="font-bold text-lg text-slate-800">ความก้าวหน้าดำเนินงาน (ขั้นตอน)</h3><p class="text-xs text-slate-500 mt-0.5">ติดตามขั้นตอนการจัดซื้อจัดจ้างและการเบิกจ่ายงบประมาณ</p></div><div class="flex flex-wrap items-center gap-2">${doneBadge}<span class="text-xs text-slate-400">➔</span>${curBadge}</div></div><div class="space-y-2">`;
 
                     for (let i = 1; i <= 8; i++) {
                         const isDone = curStat > i; const isCur = curStat === i; const isWait = curStat < i;
@@ -1351,7 +1460,27 @@
                     const res = await rpc('custom_get_audit_logs', { p_session_token: state.sessionToken, p_limit: state.auditLimit, p_offset: offset, p_start_date: state.auditStartDate || null, p_end_date: state.auditEndDate || null, p_search: state.auditSearch || null });
                     const logs = res.data || []; const totalItems = res.total || 0; const totalPages = Math.ceil(totalItems / state.auditLimit) || 1;
                     const pageTitleDesc = state.user.role === 'admin' ? 'ติดตามความเคลื่อนไหวของผู้ใช้ทั้งหมดในระบบ' : 'ประวัติการเปลี่ยนแปลงข้อมูลของคุณ';
-                    let html = `<div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6"><div><h2 class="text-2xl font-bold text-slate-800 tracking-tight">ประวัติการใช้งาน</h2><p class="text-sm text-slate-500 mt-1">${pageTitleDesc}</p></div><div class="flex flex-wrap gap-2 items-center bg-white p-2 rounded-2xl shadow-sm border border-slate-200"><input type="text" id="filter_search" value="${utils.esc(state.auditSearch)}" placeholder="🔍 ค้นหาชื่อ, ข้อความ..." class="border border-slate-200 px-3 py-2 rounded-xl text-sm outline-none w-full sm:w-auto min-w-[200px]"><input type="date" id="filter_start" value="${state.auditStartDate}" class="border border-slate-200 px-3 py-2 rounded-xl text-sm outline-none"><span class="text-slate-400 text-xs font-medium">ถึง</span><input type="date" id="filter_end" value="${state.auditEndDate}" class="border border-slate-200 px-3 py-2 rounded-xl text-sm outline-none"><button onclick="handlers.filterAudit()" class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 shadow-sm">ค้นหา</button><button onclick="handlers.clearAuditFilter()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-200">ล้าง</button></div></div>`;
+                    let html = `<div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 tracking-tight">ประวัติการใช้งาน</h2>
+                            <p class="text-sm text-slate-500 mt-1">${pageTitleDesc}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+                            <input type="text" id="filter_search" value="${utils.esc(state.auditSearch)}" placeholder="🔍 ค้นหาชื่อ, ข้อความ..." class="border border-slate-200 px-3 py-2 rounded-xl text-sm outline-none w-full sm:w-auto min-w-[200px]" onkeydown="if(event.key==='Enter')handlers.filterAudit()">
+                            <input type="date" id="filter_start" value="${state.auditStartDate}" class="border border-slate-200 px-3 py-2 rounded-xl text-sm outline-none">
+                            <span class="text-slate-400 text-xs font-medium">ถึง</span>
+                            <input type="date" id="filter_end" value="${state.auditEndDate}" class="border border-slate-200 px-3 py-2 rounded-xl text-sm outline-none">
+                            <button onclick="handlers.filterAudit()" class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 shadow-sm transition">ค้นหา</button>
+                            <button onclick="handlers.clearAuditFilter()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-200 transition">ล้าง</button>
+                            ${state.user.role === 'admin' ? `
+                            <button onclick="handlers.exportAuditExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm flex items-center gap-1.5 transition cursor-pointer" title="ดาวน์โหลดประวัติการใช้งานเป็นไฟล์ Excel">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <span>ดาวน์โหลด Excel</span>
+                            </button>` : ''}
+                        </div>
+                    </div>`;
                     if (logs.length === 0) html += `<div class="p-12 text-center bg-white border border-dashed rounded-2xl text-slate-400 shadow-sm">ไม่มีข้อมูลประวัติในระบบหรือในช่วงเวลาที่เลือก</div>`;
                     else {
                         html += `<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm mb-6"><div class="overflow-x-auto"><table class="w-full text-left text-sm whitespace-nowrap"><thead class="bg-slate-50 text-slate-600 border-b"><tr><th class="px-5 py-4">วัน-เวลา</th><th class="px-5 py-4">ผู้ใช้งาน</th>${state.user.role === 'admin' ? '<th class="px-5 py-4">สถานศึกษา</th>' : ''}<th class="px-5 py-4">รายการ</th><th class="px-5 py-4">Action</th><th class="px-5 py-4">รายละเอียด</th></tr></thead><tbody id="auditTableBody" class="divide-y divide-slate-100">${logs.map(L => {
@@ -1823,18 +1952,18 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             renderDashBarChart: (data) => {
                 if (window.stipsCharts && window.stipsCharts.stages) window.stipsCharts.stages.destroy();
 
-                let countConst = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
-                let countEquip = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
-                let budConst = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
-                let budEquip = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
+                const countConst = new Array(9).fill(0);
+                const countEquip = new Array(9).fill(0);
+                const budConst = new Array(9).fill(0);
+                const budEquip = new Array(9).fill(0);
 
                 (data || []).forEach(p => {
-                    const sNo = parseInt(p.statusNo, 10) || 1;
-                    const b = Number(p.budget) || 0;
+                    const idx = utils.getStageIndex(p);
+                    const b = Number(p.budget || p.budget_amount) || 0;
                     if (p.type === 'ที่ดิน/สิ่งก่อสร้าง' || p.type === 'สิ่งก่อสร้าง') {
-                        countConst[sNo]++; budConst[sNo] += b;
+                        countConst[idx]++; budConst[idx] += b;
                     } else {
-                        countEquip[sNo]++; budEquip[sNo] += b;
+                        countEquip[idx]++; budEquip[idx] += b;
                     }
                 });
 
@@ -1845,17 +1974,17 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 window.stipsCharts.stages = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: ['1.ยังไม่เริ่ม', '2.จัดทำ TOR', '3.เผยแพร่ TOR', '4.เชิญชวน', '5.ประกาศผู้ชนะ', '6.อุทธรณ์', '7.ลงนามสัญญา', '8.บริหารสัญญา'],
+                        labels: utils.STAGE_LABELS,
                         datasets: [
                             {
                                 label: 'ที่ดิน/สิ่งก่อสร้าง',
-                                data: [1, 2, 3, 4, 5, 6, 7, 8].map(i => countConst[i]),
+                                data: countConst,
                                 backgroundColor: '#3b82f6',
                                 borderRadius: 4
                             },
                             {
                                 label: 'ครุภัณฑ์',
-                                data: [1, 2, 3, 4, 5, 6, 7, 8].map(i => countEquip[i]),
+                                data: countEquip,
                                 backgroundColor: '#9333ea',
                                 borderRadius: 4
                             }
@@ -1867,7 +1996,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         layout: { padding: { top: 25 } },
                         plugins: {
                             legend: { display: true, position: 'top', labels: { font: { family: 'Sarabun' } } },
-                            tooltip: { callbacks: { label: (c) => ` จำนวน: ${c.raw} รายการ (งบ: ${(c.datasetIndex === 0 ? budConst[c.dataIndex + 1] : budEquip[c.dataIndex + 1]).toLocaleString()} บาท)` } },
+                            tooltip: { callbacks: { label: (c) => ` จำนวน: ${c.raw} รายการ (งบ: ${(c.datasetIndex === 0 ? budConst[c.dataIndex] : budEquip[c.dataIndex]).toLocaleString()} บาท)` } },
                             datalabels: { color: '#475569', anchor: 'end', align: 'top', font: { family: 'Sarabun', weight: 'bold', size: 10 }, formatter: (v) => v > 0 ? v : '' }
                         },
                         scales: {
@@ -1886,10 +2015,12 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 const filtered = (window.rawDashboardData || []).filter(item => {
                     const matchSheet = (sheetFilter === 'ALL') || (item.sourceSheet === sheetFilter);
                     const matchStatus = (statusFilter === 'ALL') || (String(item.statusNo) === statusFilter);
+                    const flow = utils.getStepFlow(item.statusNo, item.poAmount, item.disbursed);
                     const matchSearch = ((item.institution || '').toLowerCase().includes(searchKeyword)) ||
                         ((item.item || '').toLowerCase().includes(searchKeyword)) ||
                         ((item.budgetCode || '').toLowerCase().includes(searchKeyword)) ||
-                        ((item.budgetCode2 || '').toLowerCase().includes(searchKeyword));
+                        ((item.budgetCode2 || '').toLowerCase().includes(searchKeyword)) ||
+                        ((flow.completedName || '').toLowerCase().includes(searchKeyword));
                     return matchSheet && matchStatus && matchSearch;
                 });
 
@@ -1932,6 +2063,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 let html = '';
                 filtered.slice(0, 100).forEach(r => {
                     let tCol = (r.type === 'ที่ดิน/สิ่งก่อสร้าง' || r.type === 'สิ่งก่อสร้าง') ? 'bg-slate-700 text-white' : 'bg-purple-600 text-white';
+                    const doneBadge = utils.renderStatusBadge(r.statusNo, r.poAmount, r.disbursed);
+
                     html += `<tr class="hover:bg-blue-50/40 transition">
                         <td class="p-3 text-center border-r border-slate-100"><button onclick="app.navigate('workflow','${r.id}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap font-medium">รายงานผล →</button></td>
                         <td class="p-3 font-mono text-sm font-bold text-indigo-600 border-r border-slate-100" style="width: var(--dash-col-bcode-w, 150px); min-width: var(--dash-col-bcode-w, 150px); max-width: var(--dash-col-bcode-w, 150px);">
@@ -1941,7 +2074,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         <td class="p-3 border-r border-slate-100"><span class="text-[10px] px-2 py-0.5 rounded-md ${tCol}">${utils.esc(r.type)}</span></td>
                         <td class="p-3 font-semibold text-slate-800 border-r border-slate-100" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);" title="${utils.esc(r.institution)}"><div class="truncate">${utils.esc(r.institution)}</div></td>
                         <td class="p-3 text-slate-600 border-r border-slate-100" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);" title="${utils.esc(r.item)}"><div class="truncate">${utils.esc(r.item)}</div></td>
-                        <td class="p-3 text-center border-r border-slate-100"><span class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold border shadow-xs whitespace-nowrap inline-block ${utils.getStatusColor(r.statusNo)}">${utils.esc(r.status)}</span></td>
+                        <td class="p-3 text-center border-r border-slate-100">${doneBadge}</td>
                         <td class="p-3 text-right font-bold text-slate-800 border-r border-slate-100">${utils.formatMoney(r.budget)}</td>
                         <td class="p-3 text-right font-medium text-indigo-600 border-r border-slate-100">${utils.formatMoney(r.poAmount)}</td>
                         <td class="p-3 text-right font-semibold text-amber-600 bg-amber-50/20 border-r border-slate-100">${r.poAmount > 0 ? utils.formatMoney(Math.max(0, r.poAmount - r.disbursed)) : '-'}</td>
@@ -1955,18 +2088,18 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 });
 
                 if (window.stipsCharts && window.stipsCharts.filterStages) window.stipsCharts.filterStages.destroy();
-                let fCountConst = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
-                let fCountEquip = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
-                let fBudConst = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
-                let fBudEquip = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
+                const fCountConst = new Array(9).fill(0);
+                const fCountEquip = new Array(9).fill(0);
+                const fBudConst = new Array(9).fill(0);
+                const fBudEquip = new Array(9).fill(0);
 
                 filtered.forEach(p => {
-                    const sNo = parseInt(p.statusNo, 10) || 1;
+                    const idx = utils.getStageIndex(p);
                     const b = Number(p.budget) || 0;
                     if (p.type === 'ที่ดิน/สิ่งก่อสร้าง' || p.type === 'สิ่งก่อสร้าง') {
-                        fCountConst[sNo]++; fBudConst[sNo] += b;
+                        fCountConst[idx]++; fBudConst[idx] += b;
                     } else {
-                        fCountEquip[sNo]++; fBudEquip[sNo] += b;
+                        fCountEquip[idx]++; fBudEquip[idx] += b;
                     }
                 });
 
@@ -1976,17 +2109,17 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     window.stipsCharts.filterStages = new Chart(fCtx, {
                         type: 'bar',
                         data: {
-                            labels: ['1.ยังไม่เริ่ม', '2.จัดทำ TOR', '3.เผยแพร่ TOR', '4.เชิญชวน', '5.ประกาศผู้ชนะ', '6.อุทธรณ์', '7.ลงนามสัญญา', '8.บริหารสัญญา'],
+                            labels: utils.STAGE_LABELS,
                             datasets: [
-                                { label: 'ที่ดิน/สิ่งก่อสร้าง', data: [1, 2, 3, 4, 5, 6, 7, 8].map(i => fCountConst[i]), backgroundColor: '#3b82f6', borderRadius: 4 },
-                                { label: 'ครุภัณฑ์', data: [1, 2, 3, 4, 5, 6, 7, 8].map(i => fCountEquip[i]), backgroundColor: '#9333ea', borderRadius: 4 }
+                                { label: 'ที่ดิน/สิ่งก่อสร้าง', data: fCountConst, backgroundColor: '#3b82f6', borderRadius: 4 },
+                                { label: 'ครุภัณฑ์', data: fCountEquip, backgroundColor: '#9333ea', borderRadius: 4 }
                             ]
                         },
                         options: {
                             responsive: true, maintainAspectRatio: false, layout: { padding: { top: 25 } },
                             plugins: {
                                 legend: { display: true, position: 'top', labels: { font: { family: 'Sarabun' } } },
-                                tooltip: { callbacks: { label: (c) => ` จำนวน: ${c.raw} รายการ (งบ: ${(c.datasetIndex === 0 ? fBudConst[c.dataIndex + 1] : fBudEquip[c.dataIndex + 1]).toLocaleString()} บาท)` } },
+                                tooltip: { callbacks: { label: (c) => ` จำนวน: ${c.raw} รายการ (งบ: ${(c.datasetIndex === 0 ? fBudConst[c.dataIndex] : fBudEquip[c.dataIndex]).toLocaleString()} บาท)` } },
                                 datalabels: { color: '#475569', anchor: 'end', align: 'top', font: { family: 'Sarabun', weight: 'bold', size: 10 }, formatter: (v) => v > 0 ? v : '' }
                             },
                             scales: {
@@ -2114,7 +2247,9 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                             </div>
                         </div>
                         <div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row lg:items-end xl:items-center gap-3">
-                            <span class="px-3 py-1.5 text-xs rounded-full border font-bold text-center w-fit ${utils.getStatusColor(p.current_status)}">${p.current_status}. ${utils.getStatusName(p.current_status)}</span>
+                            <div class="flex items-center">
+                                ${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount)}
+                            </div>
                             <div class="flex flex-wrap gap-2 mt-3 sm:mt-0">
                                 <button onclick="handlers.openEditItemModal('${p.id}')" class="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-50">✏️ แก้ไข</button>
                                 ${state.user.role === 'admin' ? `<button onclick="handlers.confirmDeleteItem('${p.id}', '${utils.esc(itemName)}')" class="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50">🗑️ ลบ</button>` : ''}
@@ -2218,6 +2353,94 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             },
             filterAudit: () => { state.auditStartDate = document.getElementById('filter_start').value; state.auditEndDate = document.getElementById('filter_end').value; state.auditSearch = document.getElementById('filter_search').value; state.auditPage = 1; pages.audit(); },
             clearAuditFilter: () => { state.auditStartDate = ''; state.auditEndDate = ''; state.auditSearch = ''; state.auditPage = 1; pages.audit(); },
+            exportAuditExcel: async () => {
+                if (state.user.role !== 'admin') {
+                    return ui.toast('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถดาวน์โหลดประวัติการใช้งานได้', 'error');
+                }
+                ui.showLoader('กำลังเตรียมข้อมูลประวัติสำหรับส่งออก Excel...');
+                try {
+                    // ดึงข้อมูลรายการงบประมาณเพื่อใช้ในการจับคู่ชื่อรายการถ้ายังไม่มีใน memory
+                    if (!state.items || state.items.length === 0) {
+                        try {
+                            let itRes;
+                            try {
+                                itRes = await rpc('custom_get_items', { p_session_token: state.sessionToken, p_limit: 2000, p_offset: 0 });
+                            } catch (e) {
+                                itRes = await rpc('custom_get_projects', { p_session_token: state.sessionToken, p_limit: 2000, p_offset: 0 });
+                            }
+                            if (itRes && itRes.data) state.items = itRes.data;
+                        } catch (e) { }
+                    }
+
+                    const sSearch = document.getElementById('filter_search') ? document.getElementById('filter_search').value.trim() : (state.auditSearch || '');
+                    const sStart = document.getElementById('filter_start') ? document.getElementById('filter_start').value : (state.auditStartDate || '');
+                    const sEnd = document.getElementById('filter_end') ? document.getElementById('filter_end').value : (state.auditEndDate || '');
+
+                    // ดึงข้อมูลทั้งหมดที่ตรงตามเงื่อนไขค้นหา (จำกัดสูงสุด 50,000 รายการ)
+                    const res = await rpc('custom_get_audit_logs', {
+                        p_session_token: state.sessionToken,
+                        p_limit: 50000,
+                        p_offset: 0,
+                        p_start_date: sStart || null,
+                        p_end_date: sEnd || null,
+                        p_search: sSearch || null
+                    });
+
+                    if (!res || !res.success) {
+                        throw new Error(res?.message || 'ไม่สามารถดึงข้อมูลประวัติการใช้งานได้');
+                    }
+
+                    const logs = res.data || [];
+                    if (logs.length === 0) {
+                        return ui.toast('ไม่พบข้อมูลประวัติการใช้งานตามเงื่อนไขที่เลือก', 'warning');
+                    }
+
+                    const dataToExport = logs.map((L, idx) => {
+                        const itName = utils.getItemNameFromLog(L);
+                        const cleanDesc = utils.getCleanDesc(L);
+                        return {
+                            'ลำดับ': idx + 1,
+                            'วัน-เวลา': utils.formatDate(L.created_at),
+                            'ผู้ใช้งาน': L.user_name || L.full_name || L.username || 'ระบบ',
+                            'Username': L.username || '-',
+                            'สถานศึกษา': L.institution_name || '-',
+                            'สิทธิ์': (L.role || 'user').toUpperCase(),
+                            'รายการ': itName !== '-' ? itName : '-',
+                            'Action': L.action || '-',
+                            'รายละเอียด': cleanDesc || '-'
+                        };
+                    });
+
+                    const ws = XLSX.utils.json_to_sheet(dataToExport);
+                    ws['!cols'] = [
+                        { wch: 8 },  // ลำดับ
+                        { wch: 22 }, // วัน-เวลา
+                        { wch: 22 }, // ผู้ใช้งาน
+                        { wch: 22 }, // Username
+                        { wch: 32 }, // สถานศึกษา
+                        { wch: 10 }, // สิทธิ์
+                        { wch: 35 }, // รายการ
+                        { wch: 18 }, // Action
+                        { wch: 55 }  // รายละเอียด
+                    ];
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "ประวัติการใช้งาน");
+
+                    const now = new Date();
+                    const datePart = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+                    const timePart = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+                    const filename = `Audit_Logs_${datePart}_${timePart}.xlsx`;
+
+                    XLSX.writeFile(wb, filename);
+                    ui.toast(`ดาวน์โหลดประวัติการใช้งานสำเร็จ (${dataToExport.length} รายการ)`, 'success');
+                } catch (err) {
+                    console.error('Export audit error:', err);
+                    ui.toast(err.message || 'เกิดข้อผิดพลาดในการดาวน์โหลด Excel', 'error');
+                } finally {
+                    ui.hideLoader();
+                }
+            },
 
             loadLoginUsers: async () => {
                 try {
@@ -2238,7 +2461,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     { id: 'col_bcode2', name: 'รหัสงบประมาณ', default: true },
                     { id: 'col_inst', name: 'สถานศึกษา', default: true },
                     { id: 'col_item', name: 'รายการ', default: true },
-                    { id: 'col_stat', name: 'สถานะ', default: true },
+                    { id: 'col_stat_done', name: 'ขั้นตอนที่แล้วเสร็จ', default: true },
                     { id: 'col_bud', name: 'งบประมาณ', default: true },
                     { id: 'col_sign', name: 'ลงนามสัญญา', default: true },
                     { id: 'col_po', name: 'PO', default: true },
@@ -2268,7 +2491,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 ui.openModal('👁️ ตั้งค่าการแสดงคอลัมน์', html);
             },
             saveColumnSettings: () => {
-                const cols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_bcode2', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
+                const cols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_bcode2', 'col_inst', 'col_item', 'col_stat_done', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
                 if (!window.reportColsState) window.reportColsState = {};
                 cols.forEach(c => {
                     const el = document.getElementById(`chk_${c}`);
@@ -2307,7 +2530,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             },
 
             applyReportFilters: () => {
-                const defaultCols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_bcode2', 'col_inst', 'col_item', 'col_stat', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
+                const defaultCols = ['col_manage', 'col_year', 'col_type', 'col_prov', 'col_plan', 'col_bcode', 'col_bcode2', 'col_inst', 'col_item', 'col_stat_done', 'col_bud', 'col_sign', 'col_po', 'col_dis', 'col_exp', 'col_rem', 'col_start', 'col_end', 'col_prog', 'col_prob', 'col_resp_name', 'col_resp_phone'];
                 if (!window.reportColsState) window.reportColsState = {};
                 defaultCols.forEach(c => {
                     if (window.reportColsState[c] === undefined) window.reportColsState[c] = true;
@@ -2333,6 +2556,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
 
                 const filtered = (window.rawReportData || []).filter(p => {
                     const matchYear = year === '' || String(p.fiscal_year) === year;
+                    const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
                     const matchSearch = search === '' ||
                         (p.project_name || '').toLowerCase().includes(search) ||
                         (p.institution_name || '').toLowerCase().includes(search) ||
@@ -2341,7 +2565,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         (p.plan_type || '').toLowerCase().includes(search) ||
                         (p.province || '').toLowerCase().includes(search) ||
                         (p.resp_person || '').toLowerCase().includes(search) ||
-                        (p.resp_phone || '').toLowerCase().includes(search);
+                        (p.resp_phone || '').toLowerCase().includes(search) ||
+                        ((flow.completedName || '').toLowerCase().includes(search));
                     const matchProv = province === '' || p.province === province;
                     const matchType = itemTypeVal === '' || p.item_type === itemTypeVal;
                     const matchInst = inst === '' || p.institution_name === inst;
@@ -2379,7 +2604,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 thead += `<th class="p-3 font-semibold border-r bg-slate-50 relative select-none" style="width: var(--rep-col-item-w, 280px); min-width: var(--rep-col-item-w, 280px); max-width: var(--rep-col-item-w, 280px);"><div class="truncate pr-2">รายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--rep-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--rep-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
 
                 // Status (หน้า คอลัม งบประมาณ)
-                if (cols.col_stat) thead += `<th class="p-3 font-semibold text-center border-r min-w-[150px]">สถานะ</th>`;
+                if (cols.col_stat_done) thead += `<th class="p-3 font-semibold text-center border-r min-w-[170px]">ขั้นตอนที่แล้วเสร็จ</th>`;
 
                 if (cols.col_bud) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">งบประมาณ</th>`;
                 if (cols.col_sign) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">ลงนามสัญญา</th>`;
@@ -2402,7 +2627,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 if (groupBy && groupBy !== '') {
                     filtered.forEach(p => {
                         let key = String(p[groupBy] || 'ไม่ระบุ');
-                        if (groupBy === 'current_status') key = `${key}. ${utils.getStatusName(p[groupBy])}`;
+                        if (groupBy === 'current_status') key = utils.getFilterStatusLabel(p[groupBy]);
                         if (!groupedData[key]) groupedData[key] = [];
                         groupedData[key].push(p);
                     });
@@ -2443,8 +2668,10 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
 
                     row += `<td class="p-3 font-medium whitespace-normal border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : 'text-slate-800'}" style="width: var(--rep-col-item-w, 280px); min-width: var(--rep-col-item-w, 280px); max-width: var(--rep-col-item-w, 280px);"><p class="line-clamp-3" title="${utils.esc(p.project_name)}">${utils.esc(p.project_name)}</p></td>`;
 
-                    // Status (หน้า คอลัม งบประมาณ)
-                    if (cols.col_stat) row += `<td class="p-3 text-center border-r border-slate-100"><span class="px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl border shadow-xs whitespace-nowrap inline-block ${utils.getStatusColor(p.current_status)}">${p.current_status}. ${utils.getStatusName(p.current_status)}</span></td>`;
+                    // Status (ขั้นตอนที่แล้วเสร็จ)
+                    if (cols.col_stat_done) {
+                        row += `<td class="p-3 text-center border-r border-slate-100">${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount)}</td>`;
+                    }
 
                     if (cols.col_bud) row += `<td class="p-3 text-right font-bold text-slate-800 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(b)}</td>`;
                     if (cols.col_sign) row += `<td class="p-3 text-right font-medium text-indigo-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(sign)}</td>`;
@@ -2467,7 +2694,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 const visibleColCount = Object.values(cols).filter(Boolean).length + 1; // +1 for checkbox
 
                 // Checkbox (1) + Item Name (1) = 2
-                const leftColsCount = 2 + (cols.col_manage ? 1 : 0) + (cols.col_year ? 1 : 0) + (cols.col_type ? 1 : 0) + (cols.col_prov ? 1 : 0) + (cols.col_plan ? 1 : 0) + (cols.col_bcode ? 1 : 0) + (cols.col_bcode2 ? 1 : 0) + (cols.col_inst ? 1 : 0) + (cols.col_stat ? 1 : 0);
+                const leftColsCount = 2 + (cols.col_manage ? 1 : 0) + (cols.col_year ? 1 : 0) + (cols.col_type ? 1 : 0) + (cols.col_prov ? 1 : 0) + (cols.col_plan ? 1 : 0) + (cols.col_bcode ? 1 : 0) + (cols.col_bcode2 ? 1 : 0) + (cols.col_inst ? 1 : 0) + (cols.col_stat_done ? 1 : 0);
                 const rightColsCount = [cols.col_start, cols.col_end, cols.col_prog, cols.col_prob, cols.col_resp_name, cols.col_resp_phone].filter(Boolean).length;
 
                 if (groupBy && groupBy !== '') {
@@ -2530,7 +2757,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             exportReportExcel: () => {
                 if (!window.rawReportData || window.rawReportData.length === 0) return ui.toast('ไม่มีข้อมูลสำหรับ Export', 'warning');
                 const search = (document.getElementById('rep_search')?.value || '').toLowerCase().trim(); const year = document.getElementById('rep_year')?.value || ''; const province = document.getElementById('rep_province')?.value || ''; const bcode = document.getElementById('rep_bcode')?.value || ''; const inst = document.getElementById('rep_inst')?.value || ''; const status = document.getElementById('rep_status')?.value || '';
-                const filtered = window.rawReportData.filter(p => { const matchYear = year === '' || String(p.fiscal_year) === year; const matchSearch = search === '' || (p.item_name || p.project_name || '').toLowerCase().includes(search) || (p.institution_name || '').toLowerCase().includes(search) || (p.budget_code || '').toLowerCase().includes(search) || (p.budget_code2 || '').toLowerCase().includes(search) || (p.plan_type || '').toLowerCase().includes(search) || (p.province || '').toLowerCase().includes(search) || (p.resp_person || '').toLowerCase().includes(search) || (p.resp_phone || '').toLowerCase().includes(search); const matchProv = province === '' || p.province === province; const matchBcode = bcode === '' || p.budget_code === bcode; const matchInst = inst === '' || p.institution_name === inst; const matchStatus = status === '' || String(p.current_status) === status; return matchYear && matchSearch && matchProv && matchBcode && matchInst && matchStatus; });
+                const filtered = window.rawReportData.filter(p => { const matchYear = year === '' || String(p.fiscal_year) === year; const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount); const matchSearch = search === '' || (p.item_name || p.project_name || '').toLowerCase().includes(search) || (p.institution_name || '').toLowerCase().includes(search) || (p.budget_code || '').toLowerCase().includes(search) || (p.budget_code2 || '').toLowerCase().includes(search) || (p.plan_type || '').toLowerCase().includes(search) || (p.province || '').toLowerCase().includes(search) || (p.resp_person || '').toLowerCase().includes(search) || (p.resp_phone || '').toLowerCase().includes(search) || ((flow.completedName || '').toLowerCase().includes(search)); const matchProv = province === '' || p.province === province; const matchBcode = bcode === '' || p.budget_code === bcode; const matchInst = inst === '' || p.institution_name === inst; const matchStatus = status === '' || String(p.current_status) === status; return matchYear && matchSearch && matchProv && matchBcode && matchInst && matchStatus; });
                 if (filtered.length === 0) return ui.toast('ไม่มีข้อมูลที่จะ Export', 'warning');
 
                 const dataToExport = filtered.map(p => {
@@ -2540,6 +2767,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     const po = sign > 0 ? Math.max(0, sign - dis) : 0;
                     const exp = sign > 0 ? (po + dis) : 0;
                     const rem = Math.max(0, b - exp);
+                    const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
                     return {
                         'ปีงบฯ': p.fiscal_year || '-',
                         'ประเภท': p.item_type || '-',
@@ -2549,7 +2777,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         'รหัสงบประมาณ': p.budget_code2 || '-',
                         'สถานศึกษา': p.institution_name || '-',
                         'รายการ': p.item_name || p.project_name || '-',
-                        'สถานะ': `${p.current_status}. ${utils.getStatusName(p.current_status)}`,
+                        'ขั้นตอนที่แล้วเสร็จ': flow.completedName,
                         'งบประมาณ': b,
                         'ลงนามสัญญา': sign,
                         'PO': po,
@@ -2853,6 +3081,12 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     const disPct = bAmt > 0 ? ((disAmt / bAmt) * 100).toFixed(1) : 0;
                     const itemName = p.item_name || p.project_name || '';
 
+                    const qFlow = utils.getStepFlow(p.current_status, poAmt, disAmt);
+                    const qIsInit = (qFlow.completedStep === 1 && p.current_status <= 2);
+                    const qDoneBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs ${qIsInit ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'} whitespace-nowrap">${qIsInit ? '⚪' : '✓'} ${utils.esc(qFlow.completedName)}</span>`;
+                    const qCurBadgeClass = qFlow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : `${utils.getStatusColor(qFlow.currentStep)} font-bold`;
+                    const qCurBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs whitespace-nowrap ${qCurBadgeClass}">${qFlow.isCompleted8 ? '✨' : '●'} ${utils.esc(qFlow.currentName)}</span>`;
+
                     const modalHtml = `
                         <div class="space-y-5 text-slate-800">
                             <!-- Top Item Card -->
@@ -2864,11 +3098,13 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                                         <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-blue-100 text-blue-800">ปี ${p.fiscal_year || '-'}</span>
                                         <span class="text-xs text-slate-500 font-medium">📍 ${utils.esc(p.province || '-')}</span>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex flex-wrap items-center gap-2">
                                         ${p.contract_end_date ? utils.getContractCountdownBadge(p.contract_end_date) : ''}
-                                        <span class="px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-2xs whitespace-nowrap ${utils.getStatusColor(p.current_status)}">
-                                            สถานะปัจจุบัน: ${p.current_status}. ${utils.getStatusName(p.current_status)}
-                                        </span>
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            ${qDoneBadge}
+                                            <span class="text-xs text-slate-400">➔</span>
+                                            ${qCurBadge}
+                                        </div>
                                     </div>
                                 </div>
                                 <h3 class="text-base sm:text-lg font-bold text-slate-900 leading-snug">
