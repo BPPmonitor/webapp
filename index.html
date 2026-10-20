@@ -520,15 +520,16 @@
                 5: 'ประกาศเชิญชวนแล้ว',
                 6: 'ประกาศผู้ชนะแล้ว',
                 7: 'ผ่านขั้นตอนอุทธรณ์แล้ว',
-                8: 'ลงนามสัญญาแล้ว'
+                8: 'ลงนามสัญญา / บริหารสัญญา'
             })[s] || `สถานะ ${s}`,
             getStageIndex: (p) => {
                 const s = parseInt(p.statusNo !== undefined ? p.statusNo : p.current_status, 10) || 1;
                 const po = Number(p.poAmount !== undefined ? p.poAmount : p.po_amount) || 0;
                 const dis = Number(p.disbursed !== undefined ? p.disbursed : p.disbursed_amount) || 0;
                 if (s === 8) {
-                    if (po > 0 && dis >= po) return 8; // เสร็จสิ้นโครงการ
-                    return 7; // ลงนามสัญญาแล้ว
+                    if (po > 0 && dis >= po) return 9; // เสร็จสิ้นโครงการ
+                    if (dis > 0) return 8;             // บริหารสัญญา (อยู่ระหว่างเบิกจ่ายเงินงวด)
+                    return 7;                          // ลงนามสัญญาแล้ว (ยังไม่เริ่มเบิกจ่ายเงินงวด)
                 }
                 if (s >= 1 && s <= 7) return s - 1;
                 return 0;
@@ -542,6 +543,7 @@
                 'ประกาศผู้ชนะแล้ว',
                 'ผ่านขั้นตอนอุทธรณ์แล้ว',
                 'ลงนามสัญญาแล้ว',
+                'บริหารสัญญา',
                 'เสร็จสิ้นโครงการ'
             ],
             renderStatusBadge: (currentStatus, poAmount = 0, disbursed = 0) => {
@@ -552,6 +554,9 @@
                 if (flow.isCompleted8) {
                     badgeClass = 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold';
                     badgeIcon = '✨';
+                } else if (flow.isManagingContract) {
+                    badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200 font-bold';
+                    badgeIcon = '📋';
                 } else if (s === 1) {
                     badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
                     badgeIcon = '⚪';
@@ -566,6 +571,7 @@
                 const po = Number(poAmount) || 0;
                 const dis = Number(disbursed) || 0;
                 const isCompleted8 = (s === 8 && po > 0 && dis >= po);
+                const isManagingContract = (s === 8 && !isCompleted8 && dis > 0);
 
                 let completedStep = s > 1 ? (s - 1) : 1;
                 let completedName = '';
@@ -598,6 +604,10 @@
                         completedStep = 8;
                         completedName = 'เสร็จสิ้นโครงการ';
                         currentName = 'เสร็จสิ้นโครงการ';
+                    } else if (isManagingContract) {
+                        completedStep = 8;
+                        completedName = 'บริหารสัญญา';
+                        currentName = 'กำลังเบิกจ่ายเงินงวด';
                     } else {
                         completedStep = 7;
                         completedName = 'ลงนามสัญญาแล้ว';
@@ -613,7 +623,8 @@
                     completedName,
                     currentStep,
                     currentName,
-                    isCompleted8
+                    isCompleted8,
+                    isManagingContract
                 };
             },
             getStatusColor: (s) => ({
@@ -1228,11 +1239,50 @@
                     const flow = utils.getStepFlow(curStat, p.po_amount, p.disbursed_amount);
                     const isInitDone = (flow.completedStep === 1 && curStat <= 2);
                     const doneBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs font-bold rounded-xl border shadow-xs ${isInitDone ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}">${isInitDone ? '⚪' : '✓'} ${utils.esc(flow.completedName)}</span>`;
-                    const curBadgeClass = flow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : `${utils.getStatusColor(flow.currentStep)} font-bold`;
-                    const curBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs rounded-xl border shadow-xs ${curBadgeClass}">${flow.isCompleted8 ? '✨' : '●'} ขั้นตอนปัจจุบัน: ${utils.esc(flow.currentName)}</span>`;
+                    const curBadgeClass = flow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : flow.isManagingContract ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-bold' : `${utils.getStatusColor(flow.currentStep)} font-bold`;
+                    const curBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs rounded-xl border shadow-xs ${curBadgeClass}">${flow.isCompleted8 ? '✨' : flow.isManagingContract ? '📋' : '●'} ขั้นตอนปัจจุบัน: ${utils.esc(flow.currentName)}</span>`;
 
                     const itemName = p.item_name || p.project_name || '';
-                    let html = `<div class="mb-6"><button onclick="app.navigate('items')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้ารายการ</button><h2 class="text-2xl font-bold text-slate-800">สถานะการรายงานผล (ติดตามขั้นตอนรายการ)</h2><div class="mt-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-slate-800 text-sm font-medium flex flex-wrap items-center gap-2">${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded text-indigo-800 font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัส e-GP</span>`}${p.budget_code2 ? `<span class="font-mono bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded text-blue-700 font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''} <span>${utils.esc(itemName)}</span></p></div></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2"><div class="bg-white rounded-3xl border border-slate-100 p-5 sm:p-8 mb-6 shadow-sm"><div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 border-b border-slate-100 pb-5"><div><h3 class="font-bold text-lg text-slate-800">ความก้าวหน้าดำเนินงาน (ขั้นตอน)</h3><p class="text-xs text-slate-500 mt-0.5">ติดตามขั้นตอนการจัดซื้อจัดจ้างและการเบิกจ่ายงบประมาณ</p></div><div class="flex flex-wrap items-center gap-2">${doneBadge}<span class="text-xs text-slate-400">➔</span>${curBadge}</div></div><div class="space-y-2">`;
+                    let html = `<div class="mb-6">
+                        <button onclick="app.navigate('items')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้ารายการ</button>
+                        <h2 class="text-2xl font-bold text-slate-800">สถานะการรายงานผล (ติดตามขั้นตอนรายการ)</h2>
+                        
+                        <div class="mt-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div class="text-slate-800 text-base sm:text-lg font-bold flex items-center gap-2">
+                                    <span class="text-blue-600">📌</span>
+                                    <span>${utils.esc(itemName)}</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2 text-xs">
+                                    ${p.fiscal_year ? `<span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg font-bold">ปี ${utils.esc(p.fiscal_year)}</span>` : ''}
+                                    ${p.item_type || p.project_type ? `<span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">${utils.esc(p.item_type || p.project_type)}</span>` : ''}
+                                    ${p.institution_name ? `<span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">📍 ${utils.esc(p.institution_name)}</span>` : ''}
+                                    <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg font-bold">฿${utils.formatMoney(p.budget_amount)}</span>
+                                </div>
+                            </div>
+
+                            <form onsubmit="handlers.saveQuickBudgetCodes(event, '${p.id}')" class="pt-3 border-t border-slate-100 flex flex-wrap items-end gap-3">
+                                <div class="flex-1 min-w-[200px]">
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                                        <span class="text-indigo-600">🏷️</span> รหัสโครงการ e-GP
+                                    </label>
+                                    <input type="text" id="wf_budget_code" value="${utils.esc(p.budget_code || '')}" placeholder="เช่น 68xxxxxxxx หรือเว้นว่าง" class="w-full px-3.5 py-2 text-xs sm:text-sm font-mono font-bold text-indigo-700 bg-indigo-50/60 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-primary focus:bg-white transition" title="รหัสประกาศโครงการในระบบ e-GP">
+                                </div>
+                                <div class="flex-1 min-w-[200px]">
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                                        <span class="text-emerald-600">💰</span> รหัสงบประมาณ
+                                    </label>
+                                    <input type="text" id="wf_budget_code2" value="${utils.esc(p.budget_code2 || '')}" placeholder="ระบุรหัสงบประมาณ..." class="w-full px-3.5 py-2 text-xs sm:text-sm font-mono font-bold text-emerald-700 bg-emerald-50/60 border border-emerald-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" title="รหัสงบประมาณตาม พรบ.">
+                                </div>
+                                <div>
+                                    <button type="submit" id="btn_save_bcode" class="px-4 py-2 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-xs transition flex items-center gap-1.5 whitespace-nowrap">
+                                        <span>💾</span> บันทึกรหัส
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2"><div class="bg-white rounded-3xl border border-slate-100 p-5 sm:p-8 mb-6 shadow-sm"><div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 border-b border-slate-100 pb-5"><div><h3 class="font-bold text-lg text-slate-800">ความก้าวหน้าดำเนินงาน (ขั้นตอน)</h3><p class="text-xs text-slate-500 mt-0.5">ติดตามขั้นตอนการจัดซื้อจัดจ้างและการเบิกจ่ายงบประมาณ</p></div><div class="flex flex-wrap items-center gap-2">${doneBadge}<span class="text-xs text-slate-400">➔</span>${curBadge}</div></div><div class="space-y-2">`;
 
                     for (let i = 1; i <= 8; i++) {
                         const isDone = curStat > i; const isCur = curStat === i; const isWait = curStat < i;
@@ -1952,10 +2002,10 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             renderDashBarChart: (data) => {
                 if (window.stipsCharts && window.stipsCharts.stages) window.stipsCharts.stages.destroy();
 
-                const countConst = new Array(9).fill(0);
-                const countEquip = new Array(9).fill(0);
-                const budConst = new Array(9).fill(0);
-                const budEquip = new Array(9).fill(0);
+                const countConst = new Array(utils.STAGE_LABELS.length).fill(0);
+                const countEquip = new Array(utils.STAGE_LABELS.length).fill(0);
+                const budConst = new Array(utils.STAGE_LABELS.length).fill(0);
+                const budEquip = new Array(utils.STAGE_LABELS.length).fill(0);
 
                 (data || []).forEach(p => {
                     const idx = utils.getStageIndex(p);
@@ -2088,10 +2138,10 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 });
 
                 if (window.stipsCharts && window.stipsCharts.filterStages) window.stipsCharts.filterStages.destroy();
-                const fCountConst = new Array(9).fill(0);
-                const fCountEquip = new Array(9).fill(0);
-                const fBudConst = new Array(9).fill(0);
-                const fBudEquip = new Array(9).fill(0);
+                const fCountConst = new Array(utils.STAGE_LABELS.length).fill(0);
+                const fCountEquip = new Array(utils.STAGE_LABELS.length).fill(0);
+                const fBudConst = new Array(utils.STAGE_LABELS.length).fill(0);
+                const fBudEquip = new Array(utils.STAGE_LABELS.length).fill(0);
 
                 filtered.forEach(p => {
                     const idx = utils.getStageIndex(p);
@@ -3084,8 +3134,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     const qFlow = utils.getStepFlow(p.current_status, poAmt, disAmt);
                     const qIsInit = (qFlow.completedStep === 1 && p.current_status <= 2);
                     const qDoneBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs ${qIsInit ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'} whitespace-nowrap">${qIsInit ? '⚪' : '✓'} ${utils.esc(qFlow.completedName)}</span>`;
-                    const qCurBadgeClass = qFlow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : `${utils.getStatusColor(qFlow.currentStep)} font-bold`;
-                    const qCurBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs whitespace-nowrap ${qCurBadgeClass}">${qFlow.isCompleted8 ? '✨' : '●'} ${utils.esc(qFlow.currentName)}</span>`;
+                    const qCurBadgeClass = qFlow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : qFlow.isManagingContract ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-bold' : `${utils.getStatusColor(qFlow.currentStep)} font-bold`;
+                    const qCurBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs whitespace-nowrap ${qCurBadgeClass}">${qFlow.isCompleted8 ? '✨' : qFlow.isManagingContract ? '📋' : '●'} ${utils.esc(qFlow.currentName)}</span>`;
 
                     const modalHtml = `
                         <div class="space-y-5 text-slate-800">
@@ -3554,6 +3604,118 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 } catch (err) { ui.toast(err.message, 'error'); } finally { ui.hideLoader(); }
             },
             submitEditProject: async (e, pid) => handlers.submitEditItem(e, pid),
+
+            saveQuickBudgetCodes: async (e, itemId) => {
+                if (e && e.preventDefault) e.preventDefault();
+                const saveBtn = document.getElementById('btn_save_bcode');
+                const oldBtnText = saveBtn ? saveBtn.innerHTML : '';
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = `<span>⏳</span> บันทึก...`;
+                }
+                try {
+                    const bcode = (document.getElementById('wf_budget_code')?.value || '').trim();
+                    const bcode2 = (document.getElementById('wf_budget_code2')?.value || '').trim();
+
+                    const it = (state.items || state.projects || []).find(x => String(x.id) === String(itemId));
+                    const name = it ? (it.item_name || it.project_name || '') : '';
+                    const type = it ? (it.item_type || it.project_type || 'ที่ดิน/สิ่งก่อสร้าง') : 'ที่ดิน/สิ่งก่อสร้าง';
+                    const budget = it ? Number(it.budget_amount || 0) : 0;
+
+                    let res;
+                    try {
+                        res = await rpc('custom_update_item_details', {
+                            p_session_token: state.sessionToken,
+                            p_item_id: itemId,
+                            p_item_name: name,
+                            p_item_type: type,
+                            p_budget_amount: budget,
+                            p_budget_code: bcode,
+                            p_budget_code2: bcode2
+                        });
+                    } catch (errRpc) {
+                        try {
+                            res = await rpc('custom_update_item_details', {
+                                p_session_token: state.sessionToken,
+                                p_item_id: itemId,
+                                p_item_name: name,
+                                p_item_type: type,
+                                p_budget_amount: budget,
+                                p_budget_code: bcode
+                            });
+                        } catch (errRpc2) {
+                            try {
+                                res = await rpc('custom_update_project_details', {
+                                    p_session_token: state.sessionToken,
+                                    p_project_id: itemId,
+                                    p_project_name: name,
+                                    p_project_type: type,
+                                    p_budget_amount: budget,
+                                    p_budget_code: bcode
+                                });
+                            } catch (errRpc3) {
+                                console.warn("RPC update fallback:", errRpc3);
+                            }
+                        }
+                    }
+
+                    // Direct DB safeguard
+                    try {
+                        await supabaseClient.from('items').update({
+                            budget_code: bcode || null,
+                            budget_code2: bcode2 || null
+                        }).eq('id', itemId);
+                    } catch (errDb) {
+                        console.warn("Direct update safeguard:", errDb);
+                    }
+
+                    // Update in-memory item
+                    if (it) {
+                        it.budget_code = bcode;
+                        it.budget_code2 = bcode2;
+                    }
+                    if (state.selectedItem && String(state.selectedItem.id) === String(itemId)) {
+                        state.selectedItem.budget_code = bcode;
+                        state.selectedItem.budget_code2 = bcode2;
+                    }
+
+                    // Also update rawDashboardData and rawReportData if loaded
+                    if (window.rawDashboardData) {
+                        const dItem = window.rawDashboardData.find(x => String(x.id) === String(itemId));
+                        if (dItem) {
+                            dItem.budgetCode = bcode;
+                            dItem.budgetCode2 = bcode2;
+                        }
+                    }
+                    if (window.rawReportData) {
+                        const rItem = window.rawReportData.find(x => String(x.id) === String(itemId));
+                        if (rItem) {
+                            rItem.budget_code = bcode;
+                            rItem.budget_code2 = bcode2;
+                        }
+                    }
+
+                    logger('UPDATE_ITEM', `อัปเดตรหัสด่วน [e-GP: ${bcode || '-'}, งบ: ${bcode2 || '-'}] | รายการ: ${name}`);
+                    ui.toast('บันทึกรหัสโครงการ e-GP และรหัสงบประมาณเรียบร้อยแล้ว', 'success');
+
+                    if (saveBtn) {
+                        saveBtn.innerHTML = `<span>✓</span> บันทึกแล้ว`;
+                        setTimeout(() => {
+                            if (saveBtn) {
+                                saveBtn.disabled = false;
+                                saveBtn.innerHTML = `<span>💾</span> บันทึกรหัส`;
+                            }
+                        }, 2000);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    ui.toast(err.message || 'เกิดข้อผิดพลาดในการบันทึกรหัส', 'error');
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = oldBtnText || `<span>💾</span> บันทึกรหัส`;
+                    }
+                }
+            },
 
             updateStatus: async (nextStep, remarks = '') => {
                 try {
