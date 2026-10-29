@@ -380,7 +380,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-600 mb-1.5">รหัสผ่าน</label>
-                        <input type="password" id="login-password" required
+                        <input type="text" id="login-password" required autocomplete="off"
                             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all">
                     </div>
                     <button type="submit"
@@ -975,9 +975,10 @@
             login: async (e) => {
                 e.preventDefault(); ui.showLoader('เข้าสู่ระบบ...');
                 try {
-                    const data = await rpc("custom_login", { p_username: document.getElementById('login-username').value, p_password: document.getElementById('login-password').value });
+                    const loginPwd = document.getElementById('login-password').value;
+                    const data = await rpc("custom_login", { p_username: document.getElementById('login-username').value, p_password: loginPwd });
                     if (!data?.success) throw new Error(data?.message || 'รหัสไม่ถูกต้อง');
-                    state.sessionToken = data.session_token; state.user = data.user; storage.set("stips_session_token", state.sessionToken);
+                    state.sessionToken = data.session_token; state.user = data.user; storage.set("stips_session_token", state.sessionToken); storage.set("stips_user_pwd", loginPwd);
                     logger('LOGIN', 'เข้าสู่ระบบสำเร็จ'); ui.toast('เข้าสู่ระบบสำเร็จ');
                     app.initUserUI(); app.navigate('dashboard');
                 } catch (err) { ui.toast(err.message, 'error'); } finally { ui.hideLoader(); }
@@ -986,7 +987,7 @@
                 ui.openConfirm('ออกจากระบบ', 'ยืนยันการออกจากระบบใช่หรือไม่?', async () => {
                     ui.showLoader();
                     try { if (state.sessionToken) { logger('LOGOUT', 'ออกจากระบบ'); await rpc("custom_logout", { p_session_token: state.sessionToken }); } } catch (e) { }
-                    storage.remove("stips_session_token"); state.sessionToken = null; state.user = null;
+                    storage.remove("stips_session_token"); storage.remove("stips_user_pwd"); state.sessionToken = null; state.user = null;
                     document.getElementById('app-root').classList.add('hidden'); document.getElementById('login-root').classList.remove('hidden');
                     ui.hideLoader(); ui.toast('ออกจากระบบแล้ว'); handlers.loadLoginUsers(); handlers.loadLeaderboard(); handlers.loadLoginAnnouncement();
                 });
@@ -994,7 +995,7 @@
             validate: async () => {
                 if (!state.sessionToken) return false;
                 try { const data = await rpc("custom_me", { p_session_token: state.sessionToken }); if (data?.success) { state.user = data.user; return true; } } catch (e) { }
-                storage.remove("stips_session_token"); return false;
+                storage.remove("stips_session_token"); storage.remove("stips_user_pwd"); return false;
             }
         };
 
@@ -1514,12 +1515,42 @@
                 try {
                     const res = await rpc("custom_get_my_profile", { p_session_token: state.sessionToken });
                     const myInfo = res.data || {};
+                    let currentPass = myInfo.password_plain || myInfo.password || '';
+                    if (!currentPass) {
+                        try {
+                            const { data: uRow } = await supabaseClient
+                                .from('app_users')
+                                .select('*')
+                                .eq('username', state.user.username)
+                                .maybeSingle();
+                            if (uRow) {
+                                const rawHash = uRow.password_hash || '';
+                                const isBcrypt = String(rawHash).startsWith('$2');
+                                currentPass = uRow.password_plain || uRow.password || (!isBcrypt ? rawHash : '') || '';
+                            }
+                        } catch (_) { }
+                    }
+                    if (!currentPass) {
+                        currentPass = storage.get("stips_user_pwd") || '';
+                    }
+                    if (!currentPass && myInfo.password_hash && !String(myInfo.password_hash).startsWith('$2')) {
+                        currentPass = myInfo.password_hash;
+                    }
                     document.getElementById('page-container').innerHTML = `
                         <div class="max-w-2xl mx-auto mt-4"><h2 class="text-2xl font-bold text-slate-800 tracking-tight mb-6">⚙️ ตั้งค่าบัญชีผู้ใช้ (สถานศึกษา)</h2>
                         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm"><form onsubmit="handlers.submitProfile(event)" class="space-y-5">
-                        <div><label class="block text-sm font-medium mb-1.5 text-slate-600">ชื่อสถานศึกษา (Username)</label><input type="text" value="${utils.esc(state.user.username)}" disabled class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed font-bold"></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1.5 text-slate-600">ชื่อสถานศึกษา (Username)</label>
+                                <input type="text" value="${utils.esc(state.user.username)}" disabled class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1.5 text-blue-700">🔑 รหัสผ่านปัจจุบันของคุณ</label>
+                                <input type="text" id="prof_current_password" value="${utils.esc(currentPass || '-')}" readonly class="w-full px-4 py-3 bg-blue-50/60 border border-blue-200 rounded-xl text-blue-700 font-mono font-bold select-all outline-none" title="รหัสผ่านปัจจุบันที่ใช้งานอยู่">
+                            </div>
+                        </div>
                         <div class="pt-4 border-t border-slate-100"><h3 class="font-bold text-slate-800 mb-4 text-lg">ข้อมูลผู้รับผิดชอบระบบ</h3><div class="space-y-4"><div><label class="block text-sm font-semibold mb-1.5 text-slate-700">ชื่อ-นามสกุล ผู้รับผิดชอบ</label><input type="text" id="prof_fullname" value="${utils.esc(myInfo.full_name || '')}" class="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-primary" placeholder="ระบุชื่อเจ้าหน้าที่..."></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm font-semibold mb-1.5 text-slate-700">เบอร์โทรศัพท์ติดต่อ</label><input type="text" id="prof_phone" value="${utils.esc(myInfo.phone || '')}" class="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-primary" placeholder="08xxxxxxxx"></div><div><label class="block text-sm font-semibold mb-1.5 text-slate-700">Email</label><input type="email" id="prof_email" value="${utils.esc(myInfo.email || '')}" class="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-primary" placeholder="email@example.com"></div></div></div></div>
-                        <div class="pt-4 border-t border-slate-100"><h3 class="font-bold text-slate-800 mb-4 text-lg">เปลี่ยนรหัสผ่านใหม่</h3><div class="bg-blue-50 border border-blue-100 p-4 rounded-xl"><label class="block text-sm font-bold text-blue-800 mb-2">กำหนดรหัสผ่านใหม่ <span class="text-xs font-normal text-blue-600">(เว้นว่างไว้หากไม่ต้องการเปลี่ยน)</span></label><input type="password" id="prof_password" minlength="6" class="w-full px-4 py-3 border border-blue-200 rounded-xl outline-none focus:ring-2 focus:ring-primary" placeholder="พิมพ์รหัสผ่านใหม่..."></div></div>
+                        <div class="pt-4 border-t border-slate-100"><h3 class="font-bold text-slate-800 mb-4 text-lg">เปลี่ยนรหัสผ่านใหม่</h3><div class="bg-blue-50 border border-blue-100 p-4 rounded-xl"><label class="block text-sm font-bold text-blue-800 mb-2">กำหนดรหัสผ่านใหม่ <span class="text-xs font-normal text-blue-600">(เว้นว่างไว้หากไม่ต้องการเปลี่ยน)</span></label><input type="text" id="prof_password" minlength="6" autocomplete="off" class="w-full px-4 py-3 border border-blue-200 rounded-xl outline-none focus:ring-2 focus:ring-primary bg-white font-mono" placeholder="พิมพ์รหัสผ่านใหม่..."></div></div>
                         <div class="pt-4"><button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-4 rounded-xl transition shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 text-lg">💾 บันทึกการเปลี่ยนแปลง</button></div></form></div></div>`;
                 } catch (e) { ui.toast(e.message, 'error'); } finally { ui.hideLoader(); }
             },
@@ -3399,7 +3430,35 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             getBase64: (file) => { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => { let encoded = reader.result.toString().split(',')[1]; resolve(encoded); }; reader.onerror = error => reject(error); }); },
 
             // Modal & CRUD Operations
-            submitProfile: async (e) => { e.preventDefault(); ui.showLoader('กำลังบันทึก...'); try { await rpc("custom_update_profile", { p_session_token: state.sessionToken, p_password: document.getElementById('prof_password').value, p_full_name: document.getElementById('prof_fullname').value, p_phone: document.getElementById('prof_phone').value, p_email: document.getElementById('prof_email').value }); state.user.full_name = document.getElementById('prof_fullname').value; document.getElementById('user-fullname').innerText = state.user.full_name; document.getElementById('prof_password').value = ''; ui.toast('บันทึกข้อมูลสำเร็จ', 'success'); } catch (err) { ui.toast(err.message, 'error'); } finally { ui.hideLoader(); } },
+            submitProfile: async (e) => {
+                e.preventDefault();
+                ui.showLoader('กำลังบันทึก...');
+                try {
+                    const newPwd = document.getElementById('prof_password').value;
+                    await rpc("custom_update_profile", {
+                        p_session_token: state.sessionToken,
+                        p_password: newPwd,
+                        p_full_name: document.getElementById('prof_fullname').value,
+                        p_phone: document.getElementById('prof_phone').value,
+                        p_email: document.getElementById('prof_email').value
+                    });
+                    if (newPwd) {
+                        storage.set("stips_user_pwd", newPwd);
+                        const curPwdEl = document.getElementById('prof_current_password');
+                        if (curPwdEl) curPwdEl.value = newPwd;
+                    }
+                    state.user.full_name = document.getElementById('prof_fullname').value;
+                    if (state.user.role === 'admin') {
+                        document.getElementById('user-fullname').innerText = state.user.full_name || 'ผู้ดูแลระบบ (Admin)';
+                    }
+                    document.getElementById('prof_password').value = '';
+                    ui.toast('บันทึกข้อมูลสำเร็จ', 'success');
+                } catch (err) {
+                    ui.toast(err.message, 'error');
+                } finally {
+                    ui.hideLoader();
+                }
+            },
             openEditUserModal: (userId) => { const user = state.users.find(u => u.id === userId); if (!user) return; ui.openModal('✏️ แก้ไขข้อมูลผู้ใช้งาน', `<form onsubmit="handlers.submitEditUser(event, '${user.id}')" class="space-y-4"><div><label class="block text-sm font-medium mb-1">Username (สถานศึกษา)</label><input type="text" value="${utils.esc(user.username)}" disabled class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-100 text-slate-500 cursor-not-allowed outline-none font-bold"></div><div class="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-4"><div><label class="block text-sm font-bold text-blue-800 mb-1">🔑 กำหนดรหัสผ่านใหม่ <span class="text-xs font-normal text-blue-600">(เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน)</span></label><input type="password" id="edit_password" minlength="6" class="w-full px-4 py-2 border border-blue-200 rounded-lg outline-none focus:ring-2 focus:ring-primary" placeholder="กรอกรหัสผ่านใหม่..."></div><div><label class="block text-sm font-bold text-blue-800 mb-1">🛡️ สิทธิ์การใช้งาน</label><select id="edit_role" required class="w-full px-4 py-2 border border-blue-200 rounded-lg outline-none bg-white focus:ring-2 focus:ring-primary"><option value="user" ${user.role === 'user' ? 'selected' : ''}>User (ผู้ใช้งานวิทยาลัย)</option><option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin (ผู้ดูแลระบบส่วนกลาง)</option></select></div></div><div><label class="block text-sm font-medium mb-1">ชื่อผู้รับผิดชอบ</label><input type="text" id="edit_fullname" value="${utils.esc(user.full_name || '')}" class="w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-primary" placeholder="ระบุชื่อเจ้าหน้าที่..."></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">เบอร์โทรศัพท์</label><input type="text" id="edit_phone" value="${utils.esc(user.phone || '')}" class="w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-primary" placeholder="08xxxxxxxx"></div><div><label class="block text-sm font-medium mb-1">Email</label><input type="email" id="edit_email" value="${utils.esc(user.email || '')}" class="w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-primary" placeholder="email@example.com"></div></div><button type="submit" class="w-full bg-primary text-white font-medium py-3.5 rounded-xl hover:bg-blue-800 transition shadow-lg shadow-blue-500/30 mt-2">💾 บันทึกการแก้ไขข้อมูล</button></form>`); },
             submitEditUser: async (e, userId) => { e.preventDefault(); ui.showLoader('กำลังบันทึก...'); try { await rpc("admin_update_user", { p_session_token: state.sessionToken, p_target_user_id: userId, p_password: document.getElementById('edit_password').value, p_role: document.getElementById('edit_role').value, p_full_name: document.getElementById('edit_fullname').value, p_phone: document.getElementById('edit_phone').value, p_email: document.getElementById('edit_email').value }); logger('USER_UPDATE', `แก้ไขข้อมูลผู้ใช้ ID: ${userId.substring(0, 8)}`); ui.closeModal(); ui.toast('บันทึกข้อมูลสำเร็จ'); app.navigate('users'); } catch (err) { ui.toast(err.message, 'error'); } finally { ui.hideLoader(); } },
 
