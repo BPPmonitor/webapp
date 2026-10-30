@@ -605,22 +605,52 @@
             renderStatusBadge: (currentStatus, poAmount = 0, disbursed = 0) => {
                 const s = parseInt(currentStatus, 10) || 1;
                 const flow = utils.getStepFlow(s, poAmount, disbursed);
-                let badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                let badgeClass = '';
                 let badgeIcon = '✓';
+
+                // ไล่เฉดสีจาก แดง ไป เขียว (Red -> Rose -> Orange -> Amber -> Yellow -> Lime -> Teal -> Emerald -> Green)
                 if (flow.isCompleted8) {
                     badgeClass = 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold';
                     badgeIcon = '✨';
                 } else if (flow.isManagingContract) {
-                    badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200 font-bold';
+                    badgeClass = 'bg-green-100 text-green-900 border-green-300 font-bold';
                     badgeIcon = '📋';
-                } else if (s === 1) {
-                    badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
-                    badgeIcon = '⚪';
+                } else if (s === 8) {
+                    badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold';
+                    badgeIcon = '✍️';
+                } else if (s === 7) {
+                    badgeClass = 'bg-teal-100 text-teal-800 border-teal-300 font-bold';
+                    badgeIcon = '✓';
+                } else if (s === 6) {
+                    badgeClass = 'bg-lime-100 text-lime-900 border-lime-300 font-bold';
+                    badgeIcon = '✓';
+                } else if (s === 5) {
+                    badgeClass = 'bg-yellow-100 text-yellow-900 border-yellow-300 font-bold';
+                    badgeIcon = '✓';
+                } else if (s === 4) {
+                    badgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                    badgeIcon = '✓';
+                } else if (s === 3) {
+                    badgeClass = 'bg-orange-100 text-orange-900 border-orange-300 font-bold';
+                    badgeIcon = '✓';
                 } else if (s === 2) {
-                    badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                    badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 font-bold';
                     badgeIcon = '●';
+                } else {
+                    badgeClass = 'bg-red-100 text-red-800 border-red-300 font-bold';
+                    badgeIcon = '⚪';
                 }
-                return `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-xs ${badgeClass} whitespace-nowrap">${badgeIcon} ${utils.esc(flow.completedName)}</span>`;
+                return `<span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-xs ${badgeClass} whitespace-nowrap">${badgeIcon} ${utils.esc(flow.completedName)}</span>`;
+            },
+            renderTypeBadge: (type) => {
+                const t = String(type || '').trim();
+                // สีอ้างอิงตามกราฟแท่งหน้าแดชบอร์ด: ที่ดิน/สิ่งก่อสร้าง = #3b82f6 (สีน้ำเงิน), ครุภัณฑ์ = #9333ea (สีม่วง)
+                if (t === 'ที่ดิน/สิ่งก่อสร้าง' || t === 'สิ่งก่อสร้าง') {
+                    return `<span class="inline-flex items-center justify-center text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#3b82f6] text-white shadow-2xs whitespace-nowrap">ที่ดิน/สิ่งก่อสร้าง</span>`;
+                } else if (t === 'ครุภัณฑ์') {
+                    return `<span class="inline-flex items-center justify-center text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#9333ea] text-white shadow-2xs whitespace-nowrap">ครุภัณฑ์</span>`;
+                }
+                return t ? `<span class="inline-flex items-center justify-center text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 whitespace-nowrap">${utils.esc(t)}</span>` : '<span class="text-slate-400 font-mono">-</span>';
             },
             getStepFlow: (currentStatus, poAmount = 0, disbursed = 0) => {
                 const s = parseInt(currentStatus, 10) || 1;
@@ -1056,7 +1086,7 @@
                             <div id="filterCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 my-4">
                                 <!-- Dynamic cards go here -->
                             </div>
-                            <div class="relative w-full h-80 sm:h-96 mb-6 border border-slate-100 rounded-2xl bg-slate-50/50 p-4">
+                            <div class="relative w-full h-96 sm:h-[420px] mb-6 border border-slate-100 rounded-2xl bg-slate-50/50 p-4">
                                 <canvas id="filterStagesBarChart"></canvas>
                             </div>
                             <div class="overflow-x-auto max-h-[500px] rounded-xl border border-slate-200 shadow-sm custom-scrollbar">
@@ -1172,6 +1202,7 @@
                     const curInst = saved.institution || '';
                     const curStatus = (saved.status !== undefined && saved.status !== null) ? String(saved.status) : '';
                     const curGroup = saved.groupBy || '';
+                    const curSort = saved.sort || '';
                     const curMinBud = (saved.minBudget !== null && saved.minBudget !== undefined) ? saved.minBudget : '';
                     const curMaxBud = (saved.maxBudget !== null && saved.maxBudget !== undefined) ? saved.maxBudget : '';
                     const curExpMonth = Boolean(saved.expMonth);
@@ -1194,7 +1225,7 @@
                                 </div>
                             </div>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3 mb-4">
                                 <div class="relative xl:col-span-2">
                                     <input type="text" id="rep_search" value="${utils.esc(curSearch)}" oninput="handlers.debounceReportFilters()" onkeydown="if(event.key==='Enter') handlers.applyReportFilters()" placeholder="🔍 ค้นหาครอบคลุมทั้งหมด, ขั้นตอนที่แล้วเสร็จ..." class="border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm outline-none w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
                                     <button id="clear_rep_search" onclick="handlers.clearReportSearch()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold ${curSearch ? '' : 'hidden'}" title="ล้างการค้นหา">✕</button>
@@ -1204,7 +1235,30 @@
                                 <select id="rep_type" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curType === '' ? 'selected' : ''}>ทุกประเภท</option>${itemTypes.map(t => `<option value="${t}" ${t === curType ? 'selected' : ''}>${t}</option>`).join('')}</select>
                                 <select id="rep_inst" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curInst === '' ? 'selected' : ''}>ทุกสถานศึกษา</option>${institutions.map(i => `<option value="${i}" ${i === curInst ? 'selected' : ''}>${i}</option>`).join('')}</select>
                                 <select id="rep_status" onchange="handlers.applyReportFilters()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curStatus === '' ? 'selected' : ''}>ทุกขั้นตอนที่แล้วเสร็จ</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}" ${String(s) === curStatus ? 'selected' : ''}>${utils.getFilterStatusLabel(s)}</option>`).join('')}</select>
-                                <select id="rep_group" onchange="handlers.applyReportFilters()" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none"><option value="" ${curGroup === '' ? 'selected' : ''}>(ไม่จัดกลุ่ม)</option><option value="province" ${curGroup === 'province' ? 'selected' : ''}>จัดกลุ่ม: จังหวัด</option><option value="plan_type" ${curGroup === 'plan_type' ? 'selected' : ''}>จัดกลุ่ม: โครงการ</option><option value="institution_name" ${curGroup === 'institution_name' ? 'selected' : ''}>จัดกลุ่ม: สถานศึกษา</option><option value="current_status" ${curGroup === 'current_status' ? 'selected' : ''}>จัดกลุ่ม: ขั้นตอนที่แล้วเสร็จ</option></select>
+                                <select id="rep_sort" onchange="handlers.applyReportFilters()" class="border border-indigo-200 bg-indigo-50/50 text-indigo-700 font-bold rounded-xl px-3 py-2 text-sm outline-none cursor-pointer" title="เรียงลำดับข้อมูลในตาราง">
+                                    <option value="" ${curSort === '' ? 'selected' : ''}>↕️ เรียงลำดับ: ค่าเริ่มต้น</option>
+                                    <option value="bcode2_asc" ${curSort === 'bcode2_asc' ? 'selected' : ''}>🏷️ รหัสงบประมาณ: น้อย ➔ มาก</option>
+                                    <option value="bcode2_desc" ${curSort === 'bcode2_desc' ? 'selected' : ''}>🏷️ รหัสงบประมาณ: มาก ➔ น้อย</option>
+                                    <option value="bcode_asc" ${curSort === 'bcode_asc' ? 'selected' : ''}>🔢 รหัส e-GP: น้อย ➔ มาก</option>
+                                    <option value="bcode_desc" ${curSort === 'bcode_desc' ? 'selected' : ''}>🔢 รหัส e-GP: มาก ➔ น้อย</option>
+                                    <option value="budget_asc" ${curSort === 'budget_asc' ? 'selected' : ''}>💰 งบประมาณ: น้อย ➔ มาก</option>
+                                    <option value="budget_desc" ${curSort === 'budget_desc' ? 'selected' : ''}>💰 งบประมาณ: มาก ➔ น้อย</option>
+                                    <option value="dis_asc" ${curSort === 'dis_asc' ? 'selected' : ''}>💵 เบิกจ่ายแล้ว: น้อย ➔ มาก</option>
+                                    <option value="dis_desc" ${curSort === 'dis_desc' ? 'selected' : ''}>💵 เบิกจ่ายแล้ว: มาก ➔ น้อย</option>
+                                    <option value="sign_asc" ${curSort === 'sign_asc' ? 'selected' : ''}>✍️ ลงนามสัญญา: น้อย ➔ มาก</option>
+                                    <option value="sign_desc" ${curSort === 'sign_desc' ? 'selected' : ''}>✍️ ลงนามสัญญา: มาก ➔ น้อย</option>
+                                    <option value="po_asc" ${curSort === 'po_asc' ? 'selected' : ''}>⏳ PO: น้อย ➔ มาก</option>
+                                    <option value="po_desc" ${curSort === 'po_desc' ? 'selected' : ''}>⏳ PO: มาก ➔ น้อย</option>
+                                    <option value="exp_asc" ${curSort === 'exp_asc' ? 'selected' : ''}>📈 ผลการใช้จ่าย: น้อย ➔ มาก</option>
+                                    <option value="exp_desc" ${curSort === 'exp_desc' ? 'selected' : ''}>📈 ผลการใช้จ่าย: มาก ➔ น้อย</option>
+                                    <option value="rem_asc" ${curSort === 'rem_asc' ? 'selected' : ''}>📊 งบประมาณคงเหลือ: น้อย ➔ มาก</option>
+                                    <option value="rem_desc" ${curSort === 'rem_desc' ? 'selected' : ''}>📊 งบประมาณคงเหลือ: มาก ➔ น้อย</option>
+                                    <option value="status_asc" ${curSort === 'status_asc' ? 'selected' : ''}>🔄 ขั้นตอน: เริ่มต้น ➔ ท้ายสุด</option>
+                                    <option value="status_desc" ${curSort === 'status_desc' ? 'selected' : ''}>🔄 ขั้นตอน: ท้ายสุด ➔ เริ่มต้น</option>
+                                    <option value="end_date_asc" ${curSort === 'end_date_asc' ? 'selected' : ''}>📅 สิ้นสุดสัญญา: ใกล้ ➔ ไกล</option>
+                                    <option value="end_date_desc" ${curSort === 'end_date_desc' ? 'selected' : ''}>📅 สิ้นสุดสัญญา: ไกล ➔ ใกล้</option>
+                                </select>
+                                <select id="rep_group" onchange="handlers.applyReportFilters()" class="border border-blue-200 bg-blue-50/50 text-blue-700 font-bold rounded-xl px-3 py-2 text-sm outline-none cursor-pointer"><option value="" ${curGroup === '' ? 'selected' : ''}>(ไม่จัดกลุ่ม)</option><option value="province" ${curGroup === 'province' ? 'selected' : ''}>จัดกลุ่ม: จังหวัด</option><option value="plan_type" ${curGroup === 'plan_type' ? 'selected' : ''}>จัดกลุ่ม: โครงการ</option><option value="institution_name" ${curGroup === 'institution_name' ? 'selected' : ''}>จัดกลุ่ม: สถานศึกษา</option><option value="current_status" ${curGroup === 'current_status' ? 'selected' : ''}>จัดกลุ่ม: ขั้นตอนที่แล้วเสร็จ</option></select>
                             </div>
 
                             <div id="advanced_filters" class="${hasAdvFilter ? '' : 'hidden'} p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1312,7 +1366,7 @@
                     state.selectedItem = p; const curStat = parseInt(p.current_status, 10) || 1; const parseJSON = (str) => { try { return JSON.parse(str); } catch (e) { return null; } };
                     const flow = utils.getStepFlow(curStat, p.po_amount, p.disbursed_amount);
                     const isInitDone = (flow.completedStep === 1 && curStat <= 2);
-                    const doneBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs font-bold rounded-xl border shadow-xs ${isInitDone ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}">${isInitDone ? '⚪' : '✓'} ${utils.esc(flow.completedName)}</span>`;
+                    const doneBadge = utils.renderStatusBadge(curStat, p.po_amount, p.disbursed_amount);
                     const curBadgeClass = flow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : flow.isManagingContract ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-bold' : `${utils.getStatusColor(flow.currentStep)} font-bold`;
                     const curBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs rounded-xl border shadow-xs ${curBadgeClass}">${flow.isCompleted8 ? '✨' : flow.isManagingContract ? '📋' : '●'} ขั้นตอนปัจจุบัน: ${utils.esc(flow.currentName)}</span>`;
 
@@ -1331,7 +1385,7 @@
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2 text-xs">
                                     ${p.fiscal_year ? `<span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg font-bold">ปี ${utils.esc(p.fiscal_year)}</span>` : ''}
-                                    ${p.item_type || p.project_type ? `<span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">${utils.esc(p.item_type || p.project_type)}</span>` : ''}
+                                    ${p.item_type || p.project_type ? utils.renderTypeBadge(p.item_type || p.project_type) : ''}
                                     ${p.institution_name ? `<span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">📍 ${utils.esc(p.institution_name)}</span>` : ''}
                                     <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg font-bold">฿${utils.formatMoney(p.budget_amount)}</span>
                                 </div>
@@ -2157,7 +2211,16 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         },
                         scales: {
                             y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Sarabun' }, stepSize: 1 } },
-                            x: { grid: { display: false }, ticks: { font: { family: 'Sarabun', size: 11 } } }
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    font: { family: 'Sarabun', size: 16, weight: 'bold' },
+                                    color: '#334155',
+                                    autoSkip: false,
+                                    maxRotation: 45,
+                                    minRotation: 0
+                                }
+                            }
                         }
                     }
                 });
@@ -2218,7 +2281,6 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
 
                 let html = '';
                 filtered.slice(0, 100).forEach(r => {
-                    let tCol = (r.type === 'ที่ดิน/สิ่งก่อสร้าง' || r.type === 'สิ่งก่อสร้าง') ? 'bg-slate-700 text-white' : 'bg-purple-600 text-white';
                     const doneBadge = utils.renderStatusBadge(r.statusNo, r.poAmount, r.disbursed);
 
                     html += `<tr class="hover:bg-blue-50/40 transition group">
@@ -2227,7 +2289,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                             <div class="truncate" title="รหัสโครงการ e-GP: ${utils.esc(r.budgetCode)}">${utils.esc(r.budgetCode) || '-'}</div>
                             ${r.budgetCode2 ? `<div class="text-[11px] font-normal text-emerald-700 truncate mt-0.5" title="รหัสงบประมาณ: ${utils.esc(r.budgetCode2)}">งบ: ${utils.esc(r.budgetCode2)}</div>` : ''}
                         </td>
-                        <td class="p-3 border-r border-slate-100"><span class="text-[10px] px-2 py-0.5 rounded-md ${tCol}">${utils.esc(r.type)}</span></td>
+                        <td class="p-3 text-center border-r border-slate-100 whitespace-nowrap">${utils.renderTypeBadge(r.type)}</td>
                         <td class="p-3 font-semibold text-slate-800 border-r border-slate-100" style="width: var(--dash-col-inst-w, 190px); min-width: var(--dash-col-inst-w, 190px); max-width: var(--dash-col-inst-w, 190px);" title="${utils.esc(r.institution)}"><div class="truncate">${utils.esc(r.institution)}</div></td>
                         <td class="p-3 text-slate-600 border-r border-slate-100" style="width: var(--dash-col-item-w, 280px); min-width: var(--dash-col-item-w, 280px); max-width: var(--dash-col-item-w, 280px);" title="${utils.esc(r.item)}"><div class="truncate">${utils.esc(r.item)}</div></td>
                         <td class="p-3 text-center border-r border-slate-100">${doneBadge}</td>
@@ -2280,7 +2342,16 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                             },
                             scales: {
                                 y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Sarabun' }, stepSize: 1 } },
-                                x: { grid: { display: false }, ticks: { font: { family: 'Sarabun', size: 11 } } }
+                                x: {
+                                    grid: { display: false },
+                                    ticks: {
+                                        font: { family: 'Sarabun', size: 16, weight: 'bold' },
+                                        color: '#334155',
+                                        autoSkip: false,
+                                        maxRotation: 45,
+                                        minRotation: 0
+                                    }
+                                }
                             }
                         }
                     });
@@ -2398,7 +2469,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                             <h3 class="font-bold text-lg text-slate-800">${utils.esc(itemName)}</h3>
                             <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-sm">
                                 <span class="text-slate-500">งบตาม พรบ.: <b class="text-blue-600">฿${utils.formatMoney(p.budget_amount)}</b></span>
-                                <span class="text-slate-500">ประเภท: <b>${utils.esc(itemType)}</b></span>
+                                <span class="text-slate-500 flex items-center gap-1.5">ประเภท: ${utils.renderTypeBadge(itemType)}</span>
                                 ${state.user.role === 'admin' ? `<span class="text-slate-500">สถานศึกษา: <b class="text-primary">${utils.esc(p.institution_name)}</b></span>` : ''}
                             </div>
                         </div>
@@ -2693,6 +2764,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     institution: '',
                     status: '',
                     groupBy: '',
+                    sort: '',
                     minBudget: null,
                     maxBudget: null,
                     expMonth: false
@@ -2703,6 +2775,22 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 } catch (e) {}
                 pages.report();
                 ui.toast('ล้างตัวกรองรายงานผลเรียบร้อยแล้ว', 'info');
+            },
+
+            sortReportColumn: (colKey) => {
+                const sel = document.getElementById('rep_sort');
+                if (!sel) return;
+                const current = sel.value;
+                let next = '';
+                if (current === `${colKey}_asc`) {
+                    next = `${colKey}_desc`;
+                } else if (current === `${colKey}_desc`) {
+                    next = '';
+                } else {
+                    next = `${colKey}_asc`;
+                }
+                sel.value = next;
+                handlers.applyReportFilters();
             },
 
             toggleReportCheckRow: (checkbox, itemId) => {
@@ -2748,6 +2836,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 const inst = document.getElementById('rep_inst')?.value || '';
                 const status = document.getElementById('rep_status')?.value || '';
                 const groupBy = document.getElementById('rep_group')?.value || '';
+                const sortBy = document.getElementById('rep_sort')?.value || (state.reportFilterState ? state.reportFilterState.sort : '') || '';
                 const minBudStr = document.getElementById('rep_min_budget')?.value;
                 const maxBudStr = document.getElementById('rep_max_budget')?.value;
                 const expMonth = !!document.getElementById('rep_expire_this_month')?.checked;
@@ -2761,6 +2850,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     institution: inst,
                     status: status,
                     groupBy: groupBy,
+                    sort: sortBy,
                     minBudget: minBudStr !== '' && minBudStr !== undefined ? minBudStr : null,
                     maxBudget: maxBudStr !== '' && maxBudStr !== undefined ? maxBudStr : null,
                     expMonth: expMonth
@@ -2810,7 +2900,88 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     return matchYear && matchSearch && matchProv && matchType && matchInst && matchStatus && matchMin && matchMax && matchExpMonth;
                 });
 
-                window._currentFilteredReport = filtered;
+                const sortItems = (list, sortKey) => {
+                    if (!sortKey) return list;
+                    return [...list].sort((a, b) => {
+                        const bA = Number(a.budget_amount) || 0;
+                        const bB = Number(b.budget_amount) || 0;
+                        const sA = Number(a.po_amount) || 0;
+                        const sB = Number(b.po_amount) || 0;
+                        const dA = Number(a.disbursed_amount) || 0;
+                        const dB = Number(b.disbursed_amount) || 0;
+                        const poA = sA > 0 ? Math.max(0, sA - dA) : 0;
+                        const poB = sB > 0 ? Math.max(0, sB - dB) : 0;
+                        const expA = sA > 0 ? (poA + dA) : 0;
+                        const expB = sB > 0 ? (poB + dB) : 0;
+                        const remA = Math.max(0, bA - expA);
+                        const remB = Math.max(0, bB - expB);
+                        const statA = parseInt(a.current_status, 10) || 1;
+                        const statB = parseInt(b.current_status, 10) || 1;
+                        const dateA = a.contract_end_date ? new Date(a.contract_end_date).getTime() : Infinity;
+                        const dateB = b.contract_end_date ? new Date(b.contract_end_date).getTime() : Infinity;
+
+                        switch (sortKey) {
+                            case 'bcode2_asc': {
+                                const cA = String(a.budget_code2 || '').trim();
+                                const cB = String(b.budget_code2 || '').trim();
+                                if (!cA && !cB) return 0;
+                                if (!cA) return 1;
+                                if (!cB) return -1;
+                                return cA.localeCompare(cB, 'th', { numeric: true, sensitivity: 'base' });
+                            }
+                            case 'bcode2_desc': {
+                                const cA = String(a.budget_code2 || '').trim();
+                                const cB = String(b.budget_code2 || '').trim();
+                                if (!cA && !cB) return 0;
+                                if (!cA) return 1;
+                                if (!cB) return -1;
+                                return cB.localeCompare(cA, 'th', { numeric: true, sensitivity: 'base' });
+                            }
+                            case 'bcode_asc': {
+                                const cA = String(a.budget_code || '').trim();
+                                const cB = String(b.budget_code || '').trim();
+                                if (!cA && !cB) return 0;
+                                if (!cA) return 1;
+                                if (!cB) return -1;
+                                return cA.localeCompare(cB, 'th', { numeric: true, sensitivity: 'base' });
+                            }
+                            case 'bcode_desc': {
+                                const cA = String(a.budget_code || '').trim();
+                                const cB = String(b.budget_code || '').trim();
+                                if (!cA && !cB) return 0;
+                                if (!cA) return 1;
+                                if (!cB) return -1;
+                                return cB.localeCompare(cA, 'th', { numeric: true, sensitivity: 'base' });
+                            }
+                            case 'budget_asc': return bA - bB;
+                            case 'budget_desc': return bB - bA;
+                            case 'dis_asc': return dA - dB;
+                            case 'dis_desc': return dB - dA;
+                            case 'sign_asc': return sA - sB;
+                            case 'sign_desc': return sB - sA;
+                            case 'po_asc': return poA - poB;
+                            case 'po_desc': return poB - poA;
+                            case 'exp_asc': return expA - expB;
+                            case 'exp_desc': return expB - expA;
+                            case 'rem_asc': return remA - remB;
+                            case 'rem_desc': return remB - remA;
+                            case 'status_asc': return statA - statB;
+                            case 'status_desc': return statB - statA;
+                            case 'end_date_asc': return dateA - dateB;
+                            case 'end_date_desc': return (dateB === Infinity ? -1 : dateB) - (dateA === Infinity ? -1 : dateA);
+                            default: return 0;
+                        }
+                    });
+                };
+
+                const sortedFiltered = sortItems(filtered, sortBy);
+                window._currentFilteredReport = sortedFiltered;
+
+                const getSortThIcon = (colKey) => {
+                    if (sortBy === `${colKey}_asc`) return '<span class="text-indigo-600 font-bold ml-1 text-xs">▲</span>';
+                    if (sortBy === `${colKey}_desc`) return '<span class="text-indigo-600 font-bold ml-1 text-xs">▼</span>';
+                    return '<span class="text-slate-300 group-hover:text-slate-500 font-normal ml-1 text-[10px]">↕</span>';
+                };
 
                 const cols = window.reportColsState;
                 let thead = '<tr>';
@@ -2820,24 +2991,24 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 if (cols.col_type) thead += `<th class="p-3 font-semibold border-r text-center min-w-[100px]">ประเภท</th>`;
                 if (cols.col_prov) thead += `<th class="p-3 font-semibold border-r min-w-[100px]">จังหวัด</th>`;
                 if (cols.col_plan) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-plan-w, 150px); min-width: var(--rep-col-plan-w, 150px); max-width: var(--rep-col-plan-w, 150px);"><div class="truncate pr-2">โครงการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-plan-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-plan-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-plan-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
-                if (cols.col_bcode) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-bcode-w, 150px); min-width: var(--rep-col-bcode-w, 150px); max-width: var(--rep-col-bcode-w, 150px);"><div class="truncate pr-2">รหัสโครงการ e-GP</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
-                if (cols.col_bcode2) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-bcode2-w, 150px); min-width: var(--rep-col-bcode2-w, 150px); max-width: var(--rep-col-bcode2-w, 150px);"><div class="truncate pr-2">รหัสงบประมาณ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-bcode2-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-bcode2-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-bcode2-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
+                if (cols.col_bcode) thead += `<th onclick="handlers.sortReportColumn('bcode')" class="p-3 font-semibold border-r relative select-none cursor-pointer hover:bg-slate-100 group" style="width: var(--rep-col-bcode-w, 150px); min-width: var(--rep-col-bcode-w, 150px); max-width: var(--rep-col-bcode-w, 150px);" title="คลิกเพื่อเรียงตามรหัสโครงการ e-GP น้อย➔มาก / มาก➔น้อย"><div class="truncate pr-2 inline-flex items-center gap-1"><span>รหัสโครงการ e-GP</span>${getSortThIcon('bcode')}</div><div class="col-resizer" onclick="event.stopPropagation()" onmousedown="ui.initColResize(event, '--rep-col-bcode-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-bcode-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-bcode-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
+                if (cols.col_bcode2) thead += `<th onclick="handlers.sortReportColumn('bcode2')" class="p-3 font-semibold border-r relative select-none cursor-pointer hover:bg-slate-100 group" style="width: var(--rep-col-bcode2-w, 150px); min-width: var(--rep-col-bcode2-w, 150px); max-width: var(--rep-col-bcode2-w, 150px);" title="คลิกเพื่อเรียงตามรหัสงบประมาณ น้อย➔มาก / มาก➔น้อย"><div class="truncate pr-2 inline-flex items-center gap-1"><span>รหัสงบประมาณ</span>${getSortThIcon('bcode2')}</div><div class="col-resizer" onclick="event.stopPropagation()" onmousedown="ui.initColResize(event, '--rep-col-bcode2-w', 90, 500)" ontouchstart="ui.initColResize(event, '--rep-col-bcode2-w', 90, 500)" ondblclick="ui.resetColWidth(event, '--rep-col-bcode2-w', 150)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
                 if (cols.col_inst) thead += `<th class="p-3 font-semibold border-r relative select-none" style="width: var(--rep-col-inst-w, 190px); min-width: var(--rep-col-inst-w, 190px); max-width: var(--rep-col-inst-w, 190px);"><div class="truncate pr-2">สถานศึกษา</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-inst-w', 100, 600)" ontouchstart="ui.initColResize(event, '--rep-col-inst-w', 100, 600)" ondblclick="ui.resetColWidth(event, '--rep-col-inst-w', 190)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
 
                 // Item Name
                 thead += `<th class="p-3 font-semibold border-r bg-slate-50 relative select-none" style="width: var(--rep-col-item-w, 280px); min-width: var(--rep-col-item-w, 280px); max-width: var(--rep-col-item-w, 280px);"><div class="truncate pr-2">รายการ</div><div class="col-resizer" onmousedown="ui.initColResize(event, '--rep-col-item-w', 120, 800)" ontouchstart="ui.initColResize(event, '--rep-col-item-w', 120, 800)" ondblclick="ui.resetColWidth(event, '--rep-col-item-w', 280)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div></th>`;
 
                 // Status (หน้า คอลัม งบประมาณ)
-                if (cols.col_stat_done) thead += `<th class="p-3 font-semibold text-center border-r min-w-[170px]">ขั้นตอนที่แล้วเสร็จ</th>`;
+                if (cols.col_stat_done) thead += `<th onclick="handlers.sortReportColumn('status')" class="p-3 font-semibold text-center border-r min-w-[170px] cursor-pointer hover:bg-slate-100 select-none group" title="คลิกเพื่อเรียงตามขั้นตอน น้อย➔มาก / มาก➔น้อย"><div class="inline-flex items-center justify-center gap-1"><span>ขั้นตอนที่แล้วเสร็จ</span>${getSortThIcon('status')}</div></th>`;
 
-                if (cols.col_bud) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">งบประมาณ</th>`;
-                if (cols.col_sign) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">ลงนามสัญญา</th>`;
-                if (cols.col_po) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px] bg-amber-50/60 text-amber-900" title="วงเงินสัญญาที่รอเบิกจ่าย (ลงนามสัญญา - เบิกจ่ายแล้ว)">PO</th>`;
-                if (cols.col_dis) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px]">เบิกจ่ายแล้ว</th>`;
-                if (cols.col_exp) thead += `<th class="p-3 font-semibold text-right border-r min-w-[100px] bg-indigo-50/60 text-indigo-900" title="ผลการใช้จ่าย (PO + เบิกจ่ายแล้ว)">ผลการใช้จ่าย</th>`;
-                if (cols.col_rem) thead += `<th class="p-3 font-semibold text-right bg-purple-50/60 text-purple-900 border-r min-w-[100px]" title="งบประมาณคงเหลือ (งบประมาณรวม - ผลการใช้จ่าย)">งบประมาณคงเหลือ</th>`;
+                if (cols.col_bud) thead += `<th onclick="handlers.sortReportColumn('budget')" class="p-3 font-semibold text-right border-r min-w-[100px] cursor-pointer hover:bg-slate-100 select-none group" title="คลิกเพื่อเรียงตามงบประมาณ น้อย➔มาก / มาก➔น้อย"><div class="inline-flex items-center justify-end gap-1"><span>งบประมาณ</span>${getSortThIcon('budget')}</div></th>`;
+                if (cols.col_sign) thead += `<th onclick="handlers.sortReportColumn('sign')" class="p-3 font-semibold text-right border-r min-w-[100px] cursor-pointer hover:bg-slate-100 select-none group" title="คลิกเพื่อเรียงตามลงนามสัญญา น้อย➔มาก / มาก➔น้อย"><div class="inline-flex items-center justify-end gap-1"><span>ลงนามสัญญา</span>${getSortThIcon('sign')}</div></th>`;
+                if (cols.col_po) thead += `<th onclick="handlers.sortReportColumn('po')" class="p-3 font-semibold text-right border-r min-w-[100px] bg-amber-50/60 text-amber-900 cursor-pointer hover:bg-amber-100 select-none group" title="คลิกเพื่อเรียงตาม PO น้อย➔มาก / มาก➔น้อย"><div class="inline-flex items-center justify-end gap-1"><span>PO</span>${getSortThIcon('po')}</div></th>`;
+                if (cols.col_dis) thead += `<th onclick="handlers.sortReportColumn('dis')" class="p-3 font-semibold text-right border-r min-w-[100px] cursor-pointer hover:bg-slate-100 select-none group" title="คลิกเพื่อเรียงตามเบิกจ่ายแล้ว น้อย➔มาก / มาก➔น้อย"><div class="inline-flex items-center justify-end gap-1"><span>เบิกจ่ายแล้ว</span>${getSortThIcon('dis')}</div></th>`;
+                if (cols.col_exp) thead += `<th onclick="handlers.sortReportColumn('exp')" class="p-3 font-semibold text-right border-r min-w-[100px] bg-indigo-50/60 text-indigo-900 cursor-pointer hover:bg-indigo-100 select-none group" title="คลิกเพื่อเรียงตามผลการใช้จ่าย น้อย➔มาก / มาก➔น้อย"><div class="inline-flex items-center justify-end gap-1"><span>ผลการใช้จ่าย</span>${getSortThIcon('exp')}</div></th>`;
+                if (cols.col_rem) thead += `<th onclick="handlers.sortReportColumn('rem')" class="p-3 font-semibold text-right bg-purple-50/60 text-purple-900 border-r min-w-[100px] cursor-pointer hover:bg-purple-100 select-none group" title="คลิกเพื่อเรียงตามงบประมาณคงเหลือ น้อย➔มาก / มาก➔น้อย"><div class="inline-flex items-center justify-end gap-1"><span>งบประมาณคงเหลือ</span>${getSortThIcon('rem')}</div></th>`;
                 if (cols.col_start) thead += `<th class="p-3 font-semibold text-center border-l min-w-[100px]">เริ่มสัญญา</th>`;
-                if (cols.col_end) thead += `<th class="p-3 font-semibold text-center border-l min-w-[135px]">สิ้นสุดสัญญา</th>`;
+                if (cols.col_end) thead += `<th onclick="handlers.sortReportColumn('end_date')" class="p-3 font-semibold text-center border-l min-w-[135px] cursor-pointer hover:bg-slate-100 select-none group" title="คลิกเพื่อเรียงตามวันสิ้นสุดสัญญา ใกล้➔ไกล"><div class="inline-flex items-center justify-center gap-1"><span>สิ้นสุดสัญญา</span>${getSortThIcon('end_date')}</div></th>`;
                 if (cols.col_prog) thead += `<th class="p-3 font-semibold border-l text-center min-w-[120px]">งวดงาน</th>`;
                 if (cols.col_prob) thead += `<th class="p-3 font-semibold border-l min-w-[150px]">ปัญหาอุปสรรค</th>`;
                 if (cols.col_resp_name) thead += `<th class="p-3 font-semibold border-l min-w-[130px] max-w-[170px]">ชื่อผู้รับผิดชอบ</th>`;
@@ -2849,14 +3020,14 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 // Grouping Logic
                 let groupedData = {};
                 if (groupBy && groupBy !== '') {
-                    filtered.forEach(p => {
+                    sortedFiltered.forEach(p => {
                         let key = String(p[groupBy] || 'ไม่ระบุ');
                         if (groupBy === 'current_status') key = utils.getFilterStatusLabel(p[groupBy]);
                         if (!groupedData[key]) groupedData[key] = [];
                         groupedData[key].push(p);
                     });
                 } else {
-                    groupedData = { 'all': filtered };
+                    groupedData = { 'all': sortedFiltered };
                 }
 
                 // Render row function
@@ -2887,7 +3058,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     if (cols.col_manage) row += `<td class="p-3 text-center border-r border-slate-100 whitespace-nowrap sticky-col-cell col-sticky-manage ${stickBg}"><div class="flex items-center justify-center gap-1.5"><button onclick="handlers.openQuickPreview('${p.id}')" title="เปิดดูข้อมูลสรุปย่อและสถิติ" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1"><span>👁️</span> สรุปย่อ</button><button onclick="app.navigate('workflow', '${p.id}')" title="เข้าสู่หน้ารายงานผลขั้นตอน" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1.5 rounded-lg transition shadow-sm font-medium">รายงานผล →</button></div></td>`;
                     row += `<td class="p-3 text-center border-r border-slate-100 col-check"><input type="checkbox" data-id="${p.id}" onchange="handlers.toggleReportCheckRow(this, '${p.id}')" ${isChecked ? 'checked' : ''} class="row-checkbox w-4 h-4 cursor-pointer accent-primary rounded shadow-sm" title="คลิกเพื่อตรวจเช็ก / ขีดเส้นทับรายการนี้"></td>`;
                     if (cols.col_year) row += `<td class="p-3 text-center font-bold text-slate-700 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.fiscal_year || '-')}</td>`;
-                    if (cols.col_type) row += `<td class="p-3 text-center text-slate-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.item_type || '-')}</td>`;
+                    if (cols.col_type) row += `<td class="p-3 text-center border-r border-slate-100 whitespace-nowrap">${utils.renderTypeBadge(p.item_type || p.project_type)}</td>`;
                     if (cols.col_prov) row += `<td class="p-3 text-slate-600 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.province || '-')}</td>`;
                     if (cols.col_plan) row += `<td class="p-3 text-slate-700 font-medium border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''} whitespace-normal" style="width: var(--rep-col-plan-w, 150px); min-width: var(--rep-col-plan-w, 150px); max-width: var(--rep-col-plan-w, 150px);"><p class="line-clamp-2 text-xs" title="${utils.esc(p.plan_type || '-')}">${utils.esc(p.plan_type || '-')}</p></td>`;
                     if (cols.col_bcode) row += `<td class="p-3 font-mono text-indigo-600 font-medium border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}" style="width: var(--rep-col-bcode-w, 150px); min-width: var(--rep-col-bcode-w, 150px); max-width: var(--rep-col-bcode-w, 150px);"><div class="truncate" title="${utils.esc(p.budget_code)}">${utils.esc(p.budget_code || '-')}</div></td>`;
@@ -2958,10 +3129,10 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         groupItems.forEach(p => { tbody += renderRow(p); });
                     }
                 } else {
-                    filtered.forEach(p => { tbody += renderRow(p); });
+                    sortedFiltered.forEach(p => { tbody += renderRow(p); });
                 }
 
-                if (filtered.length === 0) tbody = `<tr><td colspan="${visibleColCount}" class="p-8 text-center text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</td></tr>`;
+                if (sortedFiltered.length === 0) tbody = `<tr><td colspan="${visibleColCount}" class="p-8 text-center text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</td></tr>`;
 
                 if (document.getElementById('reportTableBody')) {
                     document.getElementById('reportTableHead').innerHTML = thead;
@@ -2978,7 +3149,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     tfoot += `</tr>`;
 
                     document.getElementById('reportTableFoot').innerHTML = tfoot;
-                    document.getElementById('reportCount').innerText = `แสดงผล ${filtered.length} รายการ`;
+                    const sortLabel = sortBy ? ' <span class="text-indigo-600 font-bold">(เรียงลำดับข้อมูลแล้ว)</span>' : '';
+                    document.getElementById('reportCount').innerHTML = `<span>แสดงผล <strong>${sortedFiltered.length}</strong> รายการ${sortLabel}</span><span>คลิกที่หัวคอลัมน์เพื่อสลับเรียงลำดับ น้อย ➔ มาก ได้</span>`;
 
                     if (state.reportScrollTop > 0) {
                         const targetScroll = state.reportScrollTop;
@@ -3318,8 +3490,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     const itemName = p.item_name || p.project_name || '';
 
                     const qFlow = utils.getStepFlow(p.current_status, poAmt, disAmt);
-                    const qIsInit = (qFlow.completedStep === 1 && p.current_status <= 2);
-                    const qDoneBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs ${qIsInit ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'} whitespace-nowrap">${qIsInit ? '⚪' : '✓'} ${utils.esc(qFlow.completedName)}</span>`;
+                    const qDoneBadge = utils.renderStatusBadge(p.current_status, poAmt, disAmt);
                     const qCurBadgeClass = qFlow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : qFlow.isManagingContract ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-bold' : `${utils.getStatusColor(qFlow.currentStep)} font-bold`;
                     const qCurBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs whitespace-nowrap ${qCurBadgeClass}">${qFlow.isCompleted8 ? '✨' : qFlow.isManagingContract ? '📋' : '●'} ${utils.esc(qFlow.currentName)}</span>`;
 
@@ -3332,6 +3503,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                                         ${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 text-indigo-800 text-xs px-2.5 py-1 rounded-lg font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : ''}
                                         ${p.budget_code2 ? `<span class="font-mono bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs px-2.5 py-1 rounded-lg font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''}
                                         <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-blue-100 text-blue-800">ปี ${p.fiscal_year || '-'}</span>
+                                        ${p.item_type || p.project_type ? utils.renderTypeBadge(p.item_type || p.project_type) : ''}
                                         <span class="text-xs text-slate-500 font-medium">📍 ${utils.esc(p.province || '-')}</span>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2">
