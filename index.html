@@ -14,9 +14,10 @@
         href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <!-- Supabase, Excel และ Chart.js -->
+    <!-- Supabase, Excel (xlsx-js-style with colors) และ Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script>if (!window.XLSX) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>'); }</script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
@@ -569,14 +570,14 @@
             },
             getStatusName: (s) => ({ 1: 'ยังไม่ดำเนินการ', 2: 'จัดทำร่าง TOR', 3: 'เผยแพร่ร่าง TOR', 4: 'ประกาศเชิญชวน', 5: 'ประกาศผู้ชนะ', 6: 'รอผลอุทธรณ์', 7: 'ลงนามสัญญา', 8: 'บริหารสัญญา' })[s] || 'ไม่ทราบ',
             getFilterStatusLabel: (s) => ({
-                1: 'ยังไม่เริ่มดำเนินการ',
-                2: 'เตรียมจัดทำ TOR',
-                3: 'จัดทำ TOR แล้ว',
-                4: 'เผยแพร่ TOR แล้ว',
-                5: 'ประกาศเชิญชวนแล้ว',
-                6: 'ประกาศผู้ชนะแล้ว',
-                7: 'ผ่านขั้นตอนอุทธรณ์แล้ว',
-                8: 'ลงนามสัญญา / บริหารสัญญา'
+                1: '1. ยังไม่เริ่มดำเนินการ',
+                2: '2. เตรียมจัดทำ TOR',
+                3: '3. จัดทำ TOR แล้ว',
+                4: '4. เผยแพร่ TOR แล้ว',
+                5: '5. ประกาศเชิญชวนแล้ว',
+                6: '6. ประกาศผู้ชนะแล้ว',
+                7: '7. ผ่านขั้นตอนอุทธรณ์แล้ว',
+                8: '8-10. ลงนามสัญญา / บริหารสัญญา'
             })[s] || `สถานะ ${s}`,
             getStageIndex: (p) => {
                 const s = parseInt(p.statusNo !== undefined ? p.statusNo : p.current_status, 10) || 1;
@@ -591,16 +592,16 @@
                 return 0;
             },
             STAGE_LABELS: [
-                'ยังไม่เริ่มดำเนินการ',
-                'เตรียมจัดทำ TOR',
-                'จัดทำ TOR แล้ว',
-                'เผยแพร่ TOR แล้ว',
-                'ประกาศเชิญชวนแล้ว',
-                'ประกาศผู้ชนะแล้ว',
-                'ผ่านขั้นตอนอุทธรณ์แล้ว',
-                'ลงนามสัญญาแล้ว',
-                'บริหารสัญญา',
-                'เสร็จสิ้นโครงการ'
+                '1. ยังไม่เริ่มดำเนินการ',
+                '2. เตรียมจัดทำ TOR',
+                '3. จัดทำ TOR แล้ว',
+                '4. เผยแพร่ TOR แล้ว',
+                '5. ประกาศเชิญชวนแล้ว',
+                '6. ประกาศผู้ชนะแล้ว',
+                '7. ผ่านขั้นตอนอุทธรณ์แล้ว',
+                '8. ลงนามสัญญาแล้ว',
+                '9. บริหารสัญญา',
+                '10. เสร็จสิ้นโครงการ'
             ],
             renderStatusBadge: (currentStatus, poAmount = 0, disbursed = 0) => {
                 const s = parseInt(currentStatus, 10) || 1;
@@ -640,7 +641,7 @@
                     badgeClass = 'bg-red-100 text-red-800 border-red-300 font-bold';
                     badgeIcon = '⚪';
                 }
-                return `<span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-xs ${badgeClass} whitespace-nowrap">${badgeIcon} ${utils.esc(flow.completedName)}</span>`;
+                return `<span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-bold rounded-xl border shadow-xs ${badgeClass} whitespace-nowrap">${badgeIcon} ${utils.esc(flow.stageFullName)}</span>`;
             },
             renderTypeBadge: (type) => {
                 const t = String(type || '').trim();
@@ -663,52 +664,68 @@
                 let completedName = '';
                 let currentStep = s;
                 let currentName = '';
+                let stageNo = 1;
 
                 if (s === 1) {
+                    stageNo = 1;
                     completedName = 'ยังไม่เริ่มดำเนินการ';
                     currentName = 'เตรียมจัดทำ TOR';
                 } else if (s === 2) {
+                    stageNo = 2;
                     completedName = 'เตรียมจัดทำ TOR';
                     currentName = 'กำลังจัดทำร่าง TOR';
                 } else if (s === 3) {
+                    stageNo = 3;
                     completedName = 'จัดทำ TOR แล้ว';
                     currentName = 'เตรียมเผยแพร่ร่าง TOR';
                 } else if (s === 4) {
+                    stageNo = 4;
                     completedName = 'เผยแพร่ TOR แล้ว';
                     currentName = 'เตรียมประกาศเชิญชวน';
                 } else if (s === 5) {
+                    stageNo = 5;
                     completedName = 'ประกาศเชิญชวนแล้ว';
                     currentName = 'รอประกาศผู้ชนะ';
                 } else if (s === 6) {
+                    stageNo = 6;
                     completedName = 'ประกาศผู้ชนะแล้ว';
                     currentName = 'กำลังรอผลอุทธรณ์';
                 } else if (s === 7) {
+                    stageNo = 7;
                     completedName = 'ผ่านขั้นตอนอุทธรณ์แล้ว';
                     currentName = 'รอลงนามสัญญา';
                 } else if (s === 8) {
                     if (isCompleted8) {
+                        stageNo = 10;
                         completedStep = 8;
                         completedName = 'เสร็จสิ้นโครงการ';
                         currentName = 'เสร็จสิ้นโครงการ';
                     } else if (isManagingContract) {
+                        stageNo = 9;
                         completedStep = 8;
                         completedName = 'บริหารสัญญา';
                         currentName = 'กำลังเบิกจ่ายเงินงวด';
                     } else {
+                        stageNo = 8;
                         completedStep = 7;
                         completedName = 'ลงนามสัญญาแล้ว';
                         currentName = 'รอเบิกจ่าย';
                     }
                 } else {
+                    stageNo = 1;
                     completedName = '-';
                     currentName = 'ไม่ทราบ';
                 }
+
+                const stageFullName = `${stageNo}. ${completedName}`;
 
                 return {
                     completedStep,
                     completedName,
                     currentStep,
                     currentName,
+                    stageNo,
+                    stageFullName,
                     isCompleted8,
                     isManagingContract
                 };
@@ -2878,7 +2895,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         (p.province || '').toLowerCase().includes(search) ||
                         (p.resp_person || '').toLowerCase().includes(search) ||
                         (p.resp_phone || '').toLowerCase().includes(search) ||
-                        ((flow.completedName || '').toLowerCase().includes(search));
+                        ((flow.completedName || '').toLowerCase().includes(search)) ||
+                        ((flow.stageFullName || '').toLowerCase().includes(search));
                     const matchProv = province === '' || p.province === province;
                     const matchType = itemTypeVal === '' || p.item_type === itemTypeVal;
                     const matchInst = inst === '' || p.institution_name === inst;
@@ -2915,8 +2933,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         const expB = sB > 0 ? (poB + dB) : 0;
                         const remA = Math.max(0, bA - expA);
                         const remB = Math.max(0, bB - expB);
-                        const statA = parseInt(a.current_status, 10) || 1;
-                        const statB = parseInt(b.current_status, 10) || 1;
+                        const stageIdxA = utils.getStageIndex(a);
+                        const stageIdxB = utils.getStageIndex(b);
                         const dateA = a.contract_end_date ? new Date(a.contract_end_date).getTime() : Infinity;
                         const dateB = b.contract_end_date ? new Date(b.contract_end_date).getTime() : Infinity;
 
@@ -2965,8 +2983,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                             case 'exp_desc': return expB - expA;
                             case 'rem_asc': return remA - remB;
                             case 'rem_desc': return remB - remA;
-                            case 'status_asc': return statA - statB;
-                            case 'status_desc': return statB - statA;
+                            case 'status_asc': return stageIdxA - stageIdxB;
+                            case 'status_desc': return stageIdxB - stageIdxA;
                             case 'end_date_asc': return dateA - dateB;
                             case 'end_date_desc': return (dateB === Infinity ? -1 : dateB) - (dateA === Infinity ? -1 : dateA);
                             default: return 0;
@@ -3022,7 +3040,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 if (groupBy && groupBy !== '') {
                     sortedFiltered.forEach(p => {
                         let key = String(p[groupBy] || 'ไม่ระบุ');
-                        if (groupBy === 'current_status') key = utils.getFilterStatusLabel(p[groupBy]);
+                        if (groupBy === 'current_status') key = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount).stageFullName;
                         if (!groupedData[key]) groupedData[key] = [];
                         groupedData[key].push(p);
                     });
@@ -3163,44 +3181,192 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             },
 
             exportReportExcel: () => {
-                if (!window.rawReportData || window.rawReportData.length === 0) return ui.toast('ไม่มีข้อมูลสำหรับ Export', 'warning');
-                const search = (document.getElementById('rep_search')?.value || '').toLowerCase().trim(); const year = document.getElementById('rep_year')?.value || ''; const province = document.getElementById('rep_province')?.value || ''; const bcode = document.getElementById('rep_bcode')?.value || ''; const inst = document.getElementById('rep_inst')?.value || ''; const status = document.getElementById('rep_status')?.value || '';
-                const filtered = window.rawReportData.filter(p => { const matchYear = year === '' || String(p.fiscal_year) === year; const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount); const matchSearch = search === '' || (p.item_name || p.project_name || '').toLowerCase().includes(search) || (p.institution_name || '').toLowerCase().includes(search) || (p.budget_code || '').toLowerCase().includes(search) || (p.budget_code2 || '').toLowerCase().includes(search) || (p.plan_type || '').toLowerCase().includes(search) || (p.province || '').toLowerCase().includes(search) || (p.resp_person || '').toLowerCase().includes(search) || (p.resp_phone || '').toLowerCase().includes(search) || ((flow.completedName || '').toLowerCase().includes(search)); const matchProv = province === '' || p.province === province; const matchBcode = bcode === '' || p.budget_code === bcode; const matchInst = inst === '' || p.institution_name === inst; const matchStatus = status === '' || String(p.current_status) === status; return matchYear && matchSearch && matchProv && matchBcode && matchInst && matchStatus; });
-                if (filtered.length === 0) return ui.toast('ไม่มีข้อมูลที่จะ Export', 'warning');
+                const sourceList = (window._currentFilteredReport && window._currentFilteredReport.length > 0)
+                    ? window._currentFilteredReport
+                    : (window.rawReportData || []);
+                if (!sourceList || sourceList.length === 0) return ui.toast('ไม่มีข้อมูลสำหรับ Export', 'warning');
 
-                const dataToExport = filtered.map(p => {
-                    const b = Number(p.budget_amount) || 0;
-                    const sign = Number(p.po_amount) || 0;
-                    const dis = Number(p.disbursed_amount) || 0;
-                    const po = sign > 0 ? Math.max(0, sign - dis) : 0;
-                    const exp = sign > 0 ? (po + dis) : 0;
-                    const rem = Math.max(0, b - exp);
-                    const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
-                    return {
-                        'ปีงบฯ': p.fiscal_year || '-',
-                        'ประเภท': p.item_type || '-',
-                        'จังหวัด': p.province || '-',
-                        'โครงการ': p.plan_type || '-',
-                        'รหัสโครงการ e-GP': p.budget_code || '-',
-                        'รหัสงบประมาณ': p.budget_code2 || '-',
-                        'สถานศึกษา': p.institution_name || '-',
-                        'รายการ': p.item_name || p.project_name || '-',
-                        'ขั้นตอนที่แล้วเสร็จ': flow.completedName,
-                        'งบประมาณ': b,
-                        'ลงนามสัญญา': sign,
-                        'PO': po,
-                        'เบิกจ่ายแล้ว': dis,
-                        'ผลการใช้จ่าย': exp,
-                        'งบประมาณคงเหลือ': rem,
-                        'เริ่มสัญญา': p.contract_signed_date ? new Date(p.contract_signed_date).toLocaleDateString('th-TH') : '-',
-                        'สิ้นสุดสัญญา': p.contract_end_date ? new Date(p.contract_end_date).toLocaleDateString('th-TH') : '-',
-                        'งวดงาน': p.installment_count ? p.installment_count + ' งวด' : '-',
-                        'ปัญหาอุปสรรค': p.problem_detail || '-',
-                        'ชื่อผู้รับผิดชอบ': p.resp_person || 'ยังไม่ระบุ',
-                        'เบอร์โทรศัพท์': p.resp_phone || '-'
+                ui.showLoader('กำลังสร้างไฟล์ Excel...');
+                try {
+                    const dataToExport = sourceList.map(p => {
+                        const b = Number(p.budget_amount) || 0;
+                        const sign = Number(p.po_amount) || 0;
+                        const dis = Number(p.disbursed_amount) || 0;
+                        const po = sign > 0 ? Math.max(0, sign - dis) : 0;
+                        const exp = sign > 0 ? (po + dis) : 0;
+                        const rem = Math.max(0, b - exp);
+                        const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
+                        return {
+                            'ปีงบฯ': p.fiscal_year || '-',
+                            'ประเภท': p.item_type || '-',
+                            'จังหวัด': p.province || '-',
+                            'โครงการ': p.plan_type || '-',
+                            'รหัสโครงการ e-GP': p.budget_code || '-',
+                            'รหัสงบประมาณ': p.budget_code2 || '-',
+                            'สถานศึกษา': p.institution_name || '-',
+                            'รายการ': p.item_name || p.project_name || '-',
+                            'ขั้นตอนที่แล้วเสร็จ': flow.stageFullName,
+                            'งบประมาณ': b,
+                            'ลงนามสัญญา': sign,
+                            'PO': po,
+                            'เบิกจ่ายแล้ว': dis,
+                            'ผลการใช้จ่าย': exp,
+                            'งบประมาณคงเหลือ': rem,
+                            'เริ่มสัญญา': utils.formatDateOnly(p.contract_signed_date),
+                            'สิ้นสุดสัญญา': utils.formatDateOnly(p.contract_end_date),
+                            'งวดงาน': p.installment_count ? p.installment_count + ' งวด' : '-',
+                            'ปัญหาอุปสรรค': p.problem_detail || '-',
+                            'ชื่อผู้รับผิดชอบ': p.resp_person || 'ยังไม่ระบุ',
+                            'เบอร์โทรศัพท์': p.resp_phone || '-'
+                        };
+                    });
+
+                    const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+                    // Helper แปลง index ของคอลัมน์เป็นชื่อคอลัมน์ Excel เช่น 0 -> A, 8 -> I
+                    const getColLetter = (colIdx) => {
+                        let letter = '';
+                        let temp = colIdx;
+                        while (temp >= 0) {
+                            letter = String.fromCharCode((temp % 26) + 65) + letter;
+                            temp = Math.floor(temp / 26) - 1;
+                        }
+                        return letter;
                     };
-                });
-                const ws = XLSX.utils.json_to_sheet(dataToExport); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "รายงานผล"); XLSX.writeFile(wb, `Report_STIPS_${Date.now()}.xlsx`);
+
+                    const headers = Object.keys(dataToExport[0] || {});
+                    const statusColIdx = headers.indexOf('ขั้นตอนที่แล้วเสร็จ');
+                    const numCols = ['งบประมาณ', 'ลงนามสัญญา', 'PO', 'เบิกจ่ายแล้ว', 'ผลการใช้จ่าย', 'งบประมาณคงเหลือ'];
+                    const numColIndices = numCols.map(col => headers.indexOf(col));
+
+                    // กำหนดสีสถานะ 10 ลำดับ จากแดง ไป เขียว (Red to Green) สำหรับไฟล์ Excel
+                    const STAGE_EXCEL_STYLES = {
+                        1:  { fill: { fgColor: { rgb: "FEE2E2" } }, font: { color: { rgb: "991B1B" }, bold: true, name: "Sarabun" } }, // 1. ยังไม่เริ่มดำเนินการ (แดงอ่อน)
+                        2:  { fill: { fgColor: { rgb: "FFE4E6" } }, font: { color: { rgb: "9F1239" }, bold: true, name: "Sarabun" } }, // 2. เตรียมจัดทำ TOR (ชมพูแดง)
+                        3:  { fill: { fgColor: { rgb: "FFEDD5" } }, font: { color: { rgb: "9A3412" }, bold: true, name: "Sarabun" } }, // 3. จัดทำ TOR แล้ว (ส้ม)
+                        4:  { fill: { fgColor: { rgb: "FEF3C7" } }, font: { color: { rgb: "92400E" }, bold: true, name: "Sarabun" } }, // 4. เผยแพร่ TOR แล้ว (เหลืองอำพัน)
+                        5:  { fill: { fgColor: { rgb: "FEF9C3" } }, font: { color: { rgb: "854D0E" }, bold: true, name: "Sarabun" } }, // 5. ประกาศเชิญชวนแล้ว (เหลือง)
+                        6:  { fill: { fgColor: { rgb: "ECFCCB" } }, font: { color: { rgb: "3F6212" }, bold: true, name: "Sarabun" } }, // 6. ประกาศผู้ชนะแล้ว (เขียวมะนาว)
+                        7:  { fill: { fgColor: { rgb: "CCFBF1" } }, font: { color: { rgb: "115E59" }, bold: true, name: "Sarabun" } }, // 7. ผ่านขั้นตอนอุทธรณ์แล้ว (เขียวน้ำทะเล)
+                        8:  { fill: { fgColor: { rgb: "D1FAE5" } }, font: { color: { rgb: "065F46" }, bold: true, name: "Sarabun" } }, // 8. ลงนามสัญญาแล้ว (เขียวมรกตอ่อน)
+                        9:  { fill: { fgColor: { rgb: "BBF7D0" } }, font: { color: { rgb: "14532D" }, bold: true, name: "Sarabun" } }, // 9. บริหารสัญญา (เขียวสดใส)
+                        10: { fill: { fgColor: { rgb: "059669" } }, font: { color: { rgb: "FFFFFF" }, bold: true, name: "Sarabun" } }  // 10. เสร็จสิ้นโครงการ (เขียวเข้ม ตัวหนังสือขาว)
+                    };
+
+                    const BORDER_THIN = {
+                        top: { style: "thin", color: { rgb: "E2E8F0" } },
+                        bottom: { style: "thin", color: { rgb: "E2E8F0" } },
+                        left: { style: "thin", color: { rgb: "E2E8F0" } },
+                        right: { style: "thin", color: { rgb: "E2E8F0" } }
+                    };
+
+                    // แต่งสีและสไตล์หัวตาราง Excel (Header)
+                    headers.forEach((h, cIdx) => {
+                        const cellRef = getColLetter(cIdx) + '1';
+                        if (ws[cellRef]) {
+                            ws[cellRef].s = {
+                                fill: { fgColor: { rgb: "1E3A8A" } },
+                                font: { color: { rgb: "FFFFFF" }, bold: true, size: 11, name: "Sarabun" },
+                                alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                                border: {
+                                    top: { style: "thin", color: { rgb: "CBD5E1" } },
+                                    bottom: { style: "medium", color: { rgb: "0F172A" } },
+                                    left: { style: "thin", color: { rgb: "CBD5E1" } },
+                                    right: { style: "thin", color: { rgb: "CBD5E1" } }
+                                }
+                            };
+                        }
+                    });
+
+                    // แต่งสีและสไตล์แถวข้อมูลใน Excel
+                    sourceList.forEach((p, idx) => {
+                        const r = idx + 2;
+                        const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
+
+                        // ใส่สีคอลัมน์ขั้นตอนที่แล้วเสร็จ (Red to Green)
+                        if (statusColIdx >= 0) {
+                            const statusCellRef = getColLetter(statusColIdx) + r;
+                            if (ws[statusCellRef]) {
+                                const st = STAGE_EXCEL_STYLES[flow.stageNo] || STAGE_EXCEL_STYLES[1];
+                                ws[statusCellRef].s = {
+                                    fill: st.fill,
+                                    font: st.font,
+                                    alignment: { horizontal: "center", vertical: "center" },
+                                    border: BORDER_THIN
+                                };
+                            }
+                        }
+
+                        // จัดรูปแบบตัวเลขยอดเงิน (#,##0.00)
+                        numColIndices.forEach(cIdx => {
+                            if (cIdx >= 0) {
+                                const cRef = getColLetter(cIdx) + r;
+                                if (ws[cRef]) {
+                                    ws[cRef].z = '#,##0.00';
+                                    ws[cRef].s = {
+                                        alignment: { horizontal: "right", vertical: "center" },
+                                        font: { name: "Sarabun" },
+                                        border: BORDER_THIN
+                                    };
+                                }
+                            }
+                        });
+
+                        // จัดสไตล์เซลล์ข้อความอื่นๆ
+                        headers.forEach((_, cIdx) => {
+                            if (cIdx !== statusColIdx && !numColIndices.includes(cIdx)) {
+                                const cRef = getColLetter(cIdx) + r;
+                                if (ws[cRef] && !ws[cRef].s) {
+                                    const isCenter = ['ปีงบฯ', 'ประเภท', 'เริ่มสัญญา', 'สิ้นสุดสัญญา', 'งวดงาน', 'เบอร์โทรศัพท์'].includes(headers[cIdx]);
+                                    ws[cRef].s = {
+                                        alignment: { horizontal: isCenter ? "center" : "left", vertical: "center" },
+                                        font: { name: "Sarabun" },
+                                        border: BORDER_THIN
+                                    };
+                                }
+                            }
+                        });
+                    });
+
+                    // ตั้งค่าความกว้างคอลัมน์ให้อ่านง่ายพอดี
+                    ws['!cols'] = [
+                        { wch: 8 },  // ปีงบฯ
+                        { wch: 18 }, // ประเภท
+                        { wch: 16 }, // จังหวัด
+                        { wch: 28 }, // โครงการ
+                        { wch: 18 }, // รหัสโครงการ e-GP
+                        { wch: 24 }, // รหัสงบประมาณ
+                        { wch: 35 }, // สถานศึกษา
+                        { wch: 45 }, // รายการ
+                        { wch: 26 }, // ขั้นตอนที่แล้วเสร็จ (พร้อมลำดับ 1-10 และสี)
+                        { wch: 16 }, // งบประมาณ
+                        { wch: 16 }, // ลงนามสัญญา
+                        { wch: 16 }, // PO
+                        { wch: 16 }, // เบิกจ่ายแล้ว
+                        { wch: 16 }, // ผลการใช้จ่าย
+                        { wch: 16 }, // งบประมาณคงเหลือ
+                        { wch: 13 }, // เริ่มสัญญา
+                        { wch: 13 }, // สิ้นสุดสัญญา
+                        { wch: 10 }, // งวดงาน
+                        { wch: 30 }, // ปัญหาอุปสรรค
+                        { wch: 22 }, // ชื่อผู้รับผิดชอบ
+                        { wch: 15 }  // เบอร์โทรศัพท์
+                    ];
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "รายงานผล");
+
+                    const now = new Date();
+                    const dStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+                    const tStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+                    XLSX.writeFile(wb, `Report_STIPS_${dStr}_${tStr}.xlsx`);
+                    ui.toast(`Export Excel สำเร็จ (${dataToExport.length} รายการ)`, 'success');
+                } catch (err) {
+                    console.error('Export Report Error:', err);
+                    ui.toast(err.message || 'เกิดข้อผิดพลาดในการ Export Excel', 'error');
+                } finally {
+                    ui.hideLoader();
+                }
             },
 
             openQuickPreview: async (itemId) => {
