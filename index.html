@@ -379,8 +379,13 @@
                         <span class="text-[10px] text-on-surface-variant truncate">สอศ. — งบลงทุน</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-1.5 shrink-0">
-                    <span id="mobile-header-year" class="hidden sm:inline-block bg-surface-container-high text-primary text-[11px] font-bold px-2.5 py-0.5 rounded-full"></span>
+                <div class="flex items-center gap-1 shrink-0">
+                    <select id="mobile-header-year-select" aria-label="เลือกปีงบประมาณ" title="เลือกปีงบประมาณ" onchange="handlers.changeYear(this.value)"
+                        class="hidden bg-primary-container hover:bg-primary text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-blue-400/30 shadow-xs outline-none cursor-pointer transition-colors"></select>
+                    <button onclick="handlers.refreshCurrentPage()" title="รีเฟรชข้อมูล" aria-label="รีเฟรชข้อมูล"
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">refresh</span>
+                    </button>
                     <button onclick="handlers.openNotificationInbox()" title="กล่องแจ้งเตือน" aria-label="กล่องแจ้งเตือน"
                         class="relative w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors">
                         <span class="material-symbols-outlined text-[21px]">notifications</span>
@@ -398,13 +403,19 @@
                 class="hidden md:flex h-16 px-6 bg-surface-container-lowest/85 backdrop-blur-xl border-b border-slate-200/70 shrink-0 shadow-[0_1px_6px_rgba(11,28,48,0.03)] z-30 items-center justify-between gap-4">
                 <div class="flex items-center gap-3 min-w-0">
                     <span class="font-kanit font-semibold text-base text-on-surface truncate">ระบบติดตามการใช้จ่ายงบประมาณ (งบลงทุน)</span>
-                    <span id="desktop-header-year" class="bg-surface-container-high text-primary text-xs font-bold px-3 py-1 rounded-full shrink-0">สอศ.</span>
+                    <select id="desktop-header-year-select" aria-label="เลือกปีงบประมาณ" title="เลือกปีงบประมาณ" onchange="handlers.changeYear(this.value)"
+                        class="hidden bg-gradient-to-r from-primary to-secondary hover:from-primary-container hover:to-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-xs border border-blue-400/30 outline-none cursor-pointer transition-all shrink-0"></select>
                 </div>
-                <div class="flex items-center gap-3 shrink-0">
+                <div class="flex items-center gap-2.5 shrink-0">
                     <div class="hidden lg:flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded-lg text-on-surface-variant text-xs font-medium border border-surface-container">
                         <span class="material-symbols-outlined text-[16px] text-secondary">verified_user</span>
                         <span>ข้อมูลเชื่อมต่อแบบ Real-time</span>
                     </div>
+                    <button onclick="handlers.refreshCurrentPage()" title="รีเฟรชข้อมูล" aria-label="รีเฟรชข้อมูล"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-primary border border-blue-200/80 text-xs font-bold transition-all active:scale-95 shadow-2xs">
+                        <span class="material-symbols-outlined text-[17px]">refresh</span>
+                        <span>รีเฟรช</span>
+                    </button>
                     <button onclick="handlers.openNotificationInbox()" title="กล่องข้อความแจ้งเตือน" aria-label="กล่องข้อความแจ้งเตือน"
                         class="relative w-9 h-9 rounded-full bg-surface-container-low hover:bg-surface-container-high text-primary flex items-center justify-center transition-colors">
                         <span class="material-symbols-outlined text-[20px]">notifications</span>
@@ -715,11 +726,27 @@
                 return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บ.';
             },
             syncHeaderYear: (year) => {
-                const yText = year ? `ปีงบฯ ${year}` : 'สอศ.';
-                const dEl = document.getElementById('desktop-header-year');
-                const mEl = document.getElementById('mobile-header-year');
-                if (dEl) dEl.innerText = yText;
-                if (mEl) { mEl.innerText = year ? `ปี ${year}` : ''; mEl.classList.toggle('hidden', !year); }
+                const years = (state.availableYears && state.availableYears.length > 0)
+                    ? state.availableYears
+                    : (year ? [year] : []);
+                const dSel = document.getElementById('desktop-header-year-select');
+                const mSel = document.getElementById('mobile-header-year-select');
+                if (dSel) {
+                    if (years.length > 0) {
+                        dSel.innerHTML = years.map(y => `<option value="${utils.esc(y)}" class="text-slate-800 bg-white font-semibold" ${String(y) === String(year) ? 'selected' : ''}>ปีงบฯ ${utils.esc(y)}</option>`).join('');
+                        dSel.classList.remove('hidden');
+                    } else {
+                        dSel.classList.add('hidden');
+                    }
+                }
+                if (mSel) {
+                    if (years.length > 0) {
+                        mSel.innerHTML = years.map(y => `<option value="${utils.esc(y)}" class="text-slate-800 bg-white font-semibold" ${String(y) === String(year) ? 'selected' : ''}>ปี ${utils.esc(y)}</option>`).join('');
+                        mSel.classList.remove('hidden');
+                    } else {
+                        mSel.classList.add('hidden');
+                    }
+                }
             },
             buildUploadFileName: (docType, item) => {
                 const p = item || {};
@@ -1282,17 +1309,6 @@
                                         </div>
                                         <h1 class="font-kanit text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white leading-snug">ระบบติดตามและรายงานผลงบประมาณ (งบลงทุน)</h1>
                                         <p class="text-xs sm:text-sm text-blue-100/90">ภาพรวมสถานะการจัดซื้อจัดจ้าง การลงนามสัญญา และผลการใช้จ่ายแบบ Real-time</p>
-                                    </div>
-                                    <div class="flex flex-wrap items-center gap-2 shrink-0">
-                                        <div class="relative flex-1 sm:flex-none min-w-[165px]">
-                                            <select aria-label="เลือกปีงบประมาณ" title="เลือกปีงบประมาณ" onchange="handlers.changeYear(this.value)" class="w-full bg-white/15 hover:bg-white/25 text-white font-semibold px-3.5 py-2.5 rounded-xl border border-white/25 backdrop-blur-md shadow-sm transition outline-none text-sm cursor-pointer">
-                                                ${state.availableYears.map(y => `<option value="${y}" class="text-on-surface bg-white" ${y === state.fiscalYear ? 'selected' : ''}>ปีงบประมาณ ${y}</option>`).join('')}
-                                            </select>
-                                        </div>
-                                        <button onclick="pages.dashboard()" class="bg-white text-primary hover:bg-blue-50 font-semibold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 text-sm shrink-0 active:scale-95">
-                                            <span class="material-symbols-outlined text-[18px]">refresh</span>
-                                            <span>รีเฟรช</span>
-                                        </button>
                                     </div>
                                 </div>
                             </section>
@@ -3019,6 +3035,28 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     handlers.applyReportFilters(); 
                 } 
             },
+            refreshCurrentPage: () => {
+                handlers.fetchNotifications(false);
+                switch (state.currentRoute) {
+                    case 'dashboard': pages.dashboard(); break;
+                    case 'items':
+                    case 'projects': pages.items(false); break;
+                    case 'report': pages.report(); break;
+                    case 'workflow':
+                        if (state.selectedItem?.id) pages.workflow(state.selectedItem.id);
+                        else pages.items(false);
+                        break;
+                    case 'management':
+                        if (state.selectedItem?.id) pages.management(state.selectedItem.id);
+                        else pages.items(false);
+                        break;
+                    case 'users': pages.users(); break;
+                    case 'audit': pages.audit(); break;
+                    case 'announcement': pages.announcement(); break;
+                    case 'profile': pages.profile(); break;
+                    default: pages.dashboard();
+                }
+            },
             changeItemPage: (p) => { 
                 state.itemPage = p; 
                 if (document.getElementById('itemsContainer')) {
@@ -3694,7 +3732,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     if (isChecked) trClass += ' is-checked';
 
                     let row = `<tr class="${trClass}">`;
-                    if (cols.col_manage) row += `<td class="p-3 text-center border-r border-slate-100 whitespace-nowrap sticky-col-cell col-sticky-manage ${stickBg}"><div class="flex items-center justify-center gap-1.5"><button onclick="handlers.openQuickPreview('${p.id}')" title="เปิดดูข้อมูลสรุปย่อและสถิติ" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1"><span>👁️</span> สรุปย่อ</button><button onclick="handlers.openSendNotificationModal('${p.id}')" title="ส่งข้อความแจ้งเตือนไปยังสถานศึกษา" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold px-2 py-1.5 rounded-lg transition shadow-2xs flex items-center justify-center">💬</button><button onclick="app.navigate('workflow', '${p.id}')" title="เข้าสู่หน้ารายงานผลขั้นตอน" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1.5 rounded-lg transition shadow-sm font-medium">รายงานผล →</button></div></td>`;
+                    if (cols.col_manage) row += `<td class="p-3 text-center border-r border-slate-100 whitespace-nowrap sticky-col-cell col-sticky-manage ${stickBg}"><div class="flex items-center justify-center gap-1.5"><button onclick="handlers.openQuickPreview('${p.id}')" title="เปิดดูข้อมูลสรุปย่อและสถิติ" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1"><span>👁️</span> สรุปย่อ</button><button onclick="handlers.openSendNotificationModal('${p.id}')" title="ส่งข้อความแจ้งเตือนไปยังสถานศึกษา" class="bg-orange-500 hover:bg-orange-600 text-white border border-orange-600 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition shadow-sm flex items-center justify-center">💬</button><button onclick="app.navigate('workflow', '${p.id}')" title="เข้าสู่หน้ารายงานผลขั้นตอน" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1.5 rounded-lg transition shadow-sm font-medium">รายงานผล →</button></div></td>`;
                     row += `<td class="p-3 text-center border-r border-slate-100 col-check"><input type="checkbox" data-id="${p.id}" onchange="handlers.toggleReportCheckRow(this, '${p.id}')" ${isChecked ? 'checked' : ''} class="row-checkbox w-4 h-4 cursor-pointer accent-primary rounded shadow-sm" title="คลิกเพื่อตรวจเช็ก / ขีดเส้นทับรายการนี้"></td>`;
                     if (cols.col_year) row += `<td class="p-3 text-center font-bold text-slate-700 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.esc(p.fiscal_year || '-')}</td>`;
                     if (cols.col_type) row += `<td class="p-3 text-center border-r border-slate-100 whitespace-nowrap">${utils.renderTypeBadge(p.item_type || p.project_type)}</td>`;
@@ -3802,7 +3840,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                                 <button onclick="handlers.openQuickPreview('${p.id}')" class="py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1">
                                     <span>👁️</span><span>สรุปย่อ</span>
                                 </button>
-                                <button onclick="handlers.openSendNotificationModal('${p.id}')" class="py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1">
+                                <button onclick="handlers.openSendNotificationModal('${p.id}')" class="py-2 bg-orange-500 hover:bg-orange-600 text-white border border-orange-600 text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1">
                                     <span>💬</span><span>แจ้งเตือน</span>
                                 </button>
                                 <button onclick="app.navigate('workflow', '${p.id}')" class="py-2 bg-primary-container hover:bg-primary text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center justify-center gap-1">
