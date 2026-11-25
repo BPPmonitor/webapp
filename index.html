@@ -215,6 +215,7 @@
             --rep-col-bcode-w: 150px;
             --rep-col-inst-w: 190px;
             --rep-col-item-w: 280px;
+            --user-col-pwd-w: 140px;
         }
 
         .col-resizer {
@@ -788,10 +789,12 @@
                 const s = parseInt(p.statusNo !== undefined ? p.statusNo : p.current_status, 10) || 1;
                 const po = Number(p.poAmount !== undefined ? p.poAmount : p.po_amount) || 0;
                 const dis = Number(p.disbursed !== undefined ? p.disbursed : p.disbursed_amount) || 0;
+                const pile = Number(p.pileReturn !== undefined ? p.pileReturn : p.pile_return_amount) || 0;
+                const settled = dis + pile;
                 if (s === 8) {
-                    if (po > 0 && dis >= po) return 9; // เสร็จสิ้นโครงการ
-                    if (dis > 0) return 8;             // บริหารสัญญา (อยู่ระหว่างเบิกจ่ายเงินงวด)
-                    return 7;                          // ลงนามสัญญาแล้ว (ยังไม่เริ่มเบิกจ่ายเงินงวด)
+                    if (po > 0 && settled >= po - 0.01) return 9; // เสร็จสิ้นโครงการ (เบิกจ่าย + คืนค่าเสาเข็ม/หักค่างาน ครบตามสัญญา)
+                    if (settled > 0) return 8;                   // บริหารสัญญา (อยู่ระหว่างเบิกจ่ายเงินงวด)
+                    return 7;                                    // ลงนามสัญญาแล้ว (ยังไม่เริ่มเบิกจ่ายเงินงวด)
                 }
                 if (s >= 1 && s <= 7) return s - 1;
                 return 0;
@@ -808,9 +811,9 @@
                 '9. บริหารสัญญา',
                 '10. เสร็จสิ้นโครงการ'
             ],
-            renderStatusBadge: (currentStatus, poAmount = 0, disbursed = 0) => {
+            renderStatusBadge: (currentStatus, poAmount = 0, disbursed = 0, pileReturn = 0) => {
                 const s = parseInt(currentStatus, 10) || 1;
-                const flow = utils.getStepFlow(s, poAmount, disbursed);
+                const flow = utils.getStepFlow(s, poAmount, disbursed, pileReturn);
                 let badgeClass = '';
                 let badgeIcon = '✓';
 
@@ -858,12 +861,14 @@
                 }
                 return t ? `<span class="inline-flex items-center justify-center text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 whitespace-nowrap">${utils.esc(t)}</span>` : '<span class="text-slate-400 font-mono">-</span>';
             },
-            getStepFlow: (currentStatus, poAmount = 0, disbursed = 0) => {
+            getStepFlow: (currentStatus, poAmount = 0, disbursed = 0, pileReturn = 0) => {
                 const s = parseInt(currentStatus, 10) || 1;
                 const po = Number(poAmount) || 0;
                 const dis = Number(disbursed) || 0;
-                const isCompleted8 = (s === 8 && po > 0 && dis >= po);
-                const isManagingContract = (s === 8 && !isCompleted8 && dis > 0);
+                const pile = Number(pileReturn) || 0;
+                const settled = dis + pile;
+                const isCompleted8 = (s === 8 && po > 0 && settled >= po - 0.01);
+                const isManagingContract = (s === 8 && !isCompleted8 && settled > 0);
 
                 let completedStep = s > 1 ? (s - 1) : 1;
                 let completedName = '';
@@ -1199,7 +1204,8 @@
                     '--dash-col-item-w',
                     '--rep-col-bcode-w',
                     '--rep-col-inst-w',
-                    '--rep-col-item-w'
+                    '--rep-col-item-w',
+                    '--user-col-pwd-w'
                 ];
                 colVars.forEach(v => {
                     try {
@@ -1263,7 +1269,8 @@
                     } catch (e) {
                         pRes = await rpc("custom_get_projects", { p_session_token: state.sessionToken });
                     }
-                    state.items = (pRes.data || []).map(p => { if (parseInt(p.current_status, 10) < 7) { p.po_amount = 0; p.disbursed_amount = 0; p.contract_signed_date = null; p.contract_end_date = null; p.installment_count = 0; } return p; });
+                    state.items = (pRes.data || []).map(p => { if (parseInt(p.current_status, 10) < 7) { p.po_amount = 0; p.disbursed_amount = 0; p.pile_return_amount = 0; p.contract_signed_date = null; p.contract_end_date = null; p.installment_count = 0; } return p; });
+                    await handlers.attachPileReturnAmounts(state.items);
                     const years = [...new Set(state.items.map(p => String(p.fiscal_year || 'ไม่ระบุ')))].sort((a, b) => b.localeCompare(a));
                     state.availableYears = years.length > 0 ? years : [String(new Date().getFullYear() + 543)];
                     if (!state.fiscalYear || !state.availableYears.includes(state.fiscalYear)) state.fiscalYear = state.availableYears[0];
@@ -1276,7 +1283,7 @@
                             const iName = p.item_name || p.project_name || '';
                             return {
                                 id: p.id, no: index + 1, sourceSheet: iType, type: iType, institution: p.institution_name || '',
-                                item: iName, budget: p.budget_amount || 0, poAmount: Number(p.po_amount) || 0, disbursed: Number(p.disbursed_amount) || 0,
+                                item: iName, budget: p.budget_amount || 0, poAmount: Number(p.po_amount) || 0, disbursed: Number(p.disbursed_amount) || 0, pileReturn: Number(p.pile_return_amount) || 0,
                                 percent: p.budget_amount > 0 ? (Number(p.disbursed_amount) / p.budget_amount * 100) : 0, status: utils.getStatusName(statNo), statusNo: statNo,
                                 budgetCode: p.budget_code || '', budgetCode2: p.budget_code2 || '', year: p.fiscal_year || 'ไม่ระบุ',
                                 contractSignedDate: p.contract_signed_date, contractEndDate: p.contract_end_date, installmentCount: p.installment_count
@@ -1284,8 +1291,6 @@
                         });
 
                     utils.syncHeaderYear(state.fiscalYear);
-                    const defaultChartMode = window._dashChartMode || (window.innerWidth < 768 ? 'bars' : 'chart');
-                    window._dashChartMode = defaultChartMode;
 
                     document.getElementById('page-container').innerHTML = `
                         <div class="max-w-[1600px] mx-auto space-y-5">
@@ -1326,32 +1331,17 @@
                                             <span class="material-symbols-outlined text-secondary text-[22px]">bar_chart</span>
                                             <span>ความก้าวหน้าตามขั้นตอนการจัดซื้อจัดจ้าง (10 ระยะ)</span>
                                         </h2>
-                                        <p class="text-xs text-on-surface-variant mt-0.5">จำแนกตามประเภทที่ดิน/สิ่งก่อสร้าง และครุภัณฑ์ (คลิกสลับมุมมองได้)</p>
+                                        <p class="text-xs text-on-surface-variant mt-0.5">จำแนกตามประเภทที่ดิน/สิ่งก่อสร้าง และครุภัณฑ์</p>
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-2 shrink-0">
-                                        <div class="flex items-center gap-3 text-xs font-medium mr-1">
-                                            <span class="inline-flex items-center gap-1.5 text-on-surface-variant"><span class="w-2.5 h-2.5 rounded-sm bg-[#3b82f6]"></span>สิ่งก่อสร้าง</span>
-                                            <span class="inline-flex items-center gap-1.5 text-on-surface-variant"><span class="w-2.5 h-2.5 rounded-sm bg-[#9333ea]"></span>ครุภัณฑ์</span>
-                                        </div>
-                                        <div class="inline-flex rounded-xl bg-surface-container p-1 text-xs font-semibold">
-                                            <button type="button" id="btnDashModeBars" onclick="handlers.setDashChartMode('bars')" class="px-2.5 py-1 rounded-lg transition flex items-center gap-1 ${defaultChartMode === 'bars' ? 'bg-white text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'}">
-                                                <span class="material-symbols-outlined text-[15px]">view_list</span><span>แท่งแนวนอน</span>
-                                            </button>
-                                            <button type="button" id="btnDashModeChart" onclick="handlers.setDashChartMode('chart')" class="px-2.5 py-1 rounded-lg transition flex items-center gap-1 ${defaultChartMode === 'chart' ? 'bg-white text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'}">
-                                                <span class="material-symbols-outlined text-[15px]">equalizer</span><span>กราฟแท่ง</span>
-                                            </button>
-                                        </div>
+                                    <div class="flex flex-wrap items-center gap-3 text-xs font-medium shrink-0">
+                                        <span class="inline-flex items-center gap-1.5 text-on-surface-variant"><span class="w-2.5 h-2.5 rounded-sm bg-[#3b82f6]"></span>สิ่งก่อสร้าง</span>
+                                        <span class="inline-flex items-center gap-1.5 text-on-surface-variant"><span class="w-2.5 h-2.5 rounded-sm bg-[#9333ea]"></span>ครุภัณฑ์</span>
                                     </div>
                                 </div>
 
-                                <!-- Horizontal Stacked 10-Step Progress Bars (Mobile Friendly) -->
-                                <div id="dashStageBarsWrap" class="${defaultChartMode === 'bars' ? '' : 'hidden'} space-y-2.5">
-                                    <div id="dashStageBarsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3"></div>
-                                </div>
-
-                                <!-- Chart.js Bar Chart -->
-                                <div id="dashStageChartWrap" class="${defaultChartMode === 'chart' ? '' : 'hidden'} relative w-full h-80 sm:h-[400px] border border-surface-container rounded-xl bg-surface-container-low/50 p-3 sm:p-4">
-                                    <canvas id="filterStagesBarChart"></canvas>
+                                <!-- Chart.js Horizontal Paired Bar Chart (2 Bars per Stage) -->
+                                <div id="dashStageBarsWrap" class="relative w-full h-[520px] sm:h-[580px] border border-surface-container rounded-xl bg-surface-container-low/50 p-3 sm:p-4">
+                                    <canvas id="filterStagesHorizontalChart"></canvas>
                                 </div>
                             </section>
 
@@ -1503,6 +1493,7 @@
                             output_type: p.output_type || '',
                             item_name: iName,
                             project_name: iName,
+                            pile_return_amount: Number(p.pile_return_amount) || 0,
                             contract_signed_date: p.contract_signed_date || '',
                             contract_end_date: p.contract_end_date || '',
                             installment_count: p.installment_count || 0,
@@ -1512,6 +1503,7 @@
                             resp_phone: p.resp_phone || ''
                         };
                     });
+                    await handlers.attachPileReturnAmounts(window.rawReportData);
 
                     const provinces = [...new Set(items.map(p => p.province).filter(Boolean))].sort();
                     const itemTypes = [...new Set(items.map(p => p.item_type).filter(Boolean))].sort();
@@ -1671,7 +1663,8 @@
                         } catch (e) {
                             data = await rpc("custom_get_projects", { p_session_token: state.sessionToken });
                         }
-                        state.items = (data.data || []).map(p => { if (parseInt(p.current_status, 10) < 7) { p.po_amount = 0; p.disbursed_amount = 0; p.contract_signed_date = null; p.contract_end_date = null; p.installment_count = 0; } return p; }); 
+                        state.items = (data.data || []).map(p => { if (parseInt(p.current_status, 10) < 7) { p.po_amount = 0; p.disbursed_amount = 0; p.pile_return_amount = 0; p.contract_signed_date = null; p.contract_end_date = null; p.installment_count = 0; } return p; });
+                        await handlers.attachPileReturnAmounts(state.items);
                         state.itemPage = 1;
                         const years = [...new Set(state.items.map(p => String(p.fiscal_year || 'ไม่ระบุ')))].sort((a, b) => b.localeCompare(a));
                         state.availableYears = years.length > 0 ? years : [String(new Date().getFullYear() + 543)];
@@ -1735,9 +1728,9 @@
                     const wfHistory = wfRes.data || []; const appealData = appRes.data ? appRes.data[0] : null; const contractData = contRes.data ? contRes.data[0] : null;
                     const latestWf = {}; wfHistory.forEach(w => { if (!latestWf[w.status_no]) latestWf[w.status_no] = w; });
                     state.selectedItem = p; const curStat = parseInt(p.current_status, 10) || 1; const parseJSON = (str) => { try { return JSON.parse(str); } catch (e) { return null; } };
-                    const flow = utils.getStepFlow(curStat, p.po_amount, p.disbursed_amount);
+                    const flow = utils.getStepFlow(curStat, p.po_amount, p.disbursed_amount, p.pile_return_amount);
                     const isInitDone = (flow.completedStep === 1 && curStat <= 2);
-                    const doneBadge = utils.renderStatusBadge(curStat, p.po_amount, p.disbursed_amount);
+                    const doneBadge = utils.renderStatusBadge(curStat, p.po_amount, p.disbursed_amount, p.pile_return_amount);
                     const curBadgeClass = flow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : flow.isManagingContract ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-bold' : `${utils.getStatusColor(flow.currentStep)} font-bold`;
                     const curBadge = `<span class="inline-flex items-center gap-1 px-3.5 py-1 text-xs rounded-xl border shadow-xs ${curBadgeClass}">${flow.isCompleted8 ? '✨' : flow.isManagingContract ? '📋' : '●'} ขั้นตอนปัจจุบัน: ${utils.esc(flow.currentName)}</span>`;
 
@@ -2059,37 +2052,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Dynamic SVG Financial Donut Card -->
-                                <div class="bg-surface-container-lowest rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">
-                                    <h3 class="font-kanit font-bold text-base text-on-surface flex items-center gap-2 border-b border-surface-container pb-3">
-                                        <span class="material-symbols-outlined text-tertiary text-[20px]">donut_large</span>
-                                        <span>สถานะการใช้จ่ายงบประมาณ</span>
-                                    </h3>
-                                    <div class="flex items-center gap-4">
-                                        <div class="relative w-32 h-32 shrink-0 mx-auto sm:mx-0">
-                                            <svg viewBox="0 0 132 132" class="w-full h-full -rotate-90">
-                                                <circle cx="66" cy="66" r="${donutR}" fill="none" stroke="#e2e8f0" stroke-width="14"></circle>
-                                                ${poLen > 0 ? `<circle cx="66" cy="66" r="${donutR}" fill="none" stroke="#f59e0b" stroke-width="14" stroke-dasharray="${poLen.toFixed(2)} ${donutC.toFixed(2)}" stroke-dashoffset="${(-disLen).toFixed(2)}" stroke-linecap="butt"></circle>` : ''}
-                                                ${disLen > 0 ? `<circle cx="66" cy="66" r="${donutR}" fill="none" stroke="#006c49" stroke-width="14" stroke-dasharray="${disLen.toFixed(2)} ${donutC.toFixed(2)}" stroke-dashoffset="0" stroke-linecap="butt"></circle>` : ''}
-                                            </svg>
-                                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                                <span class="font-kanit text-lg font-bold text-on-surface tabular-nums">${pctDis.toFixed(1)}%</span>
-                                                <span class="text-[10px] text-on-surface-variant">เบิกจ่ายแล้ว</span>
-                                            </div>
-                                        </div>
-                                        <div class="flex-1 space-y-2 text-xs tabular-nums min-w-0">
-                                            <div class="flex justify-between items-center gap-2"><span class="text-on-surface-variant flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></span>งบประมาณ</span><span class="font-bold text-on-surface truncate">${utils.formatShortMoney(wfBud)}</span></div>
-                                            <div class="flex justify-between items-center gap-2"><span class="text-on-surface-variant flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-tertiary shrink-0"></span>เบิกจ่ายแล้ว</span><span class="font-bold text-tertiary truncate">${utils.formatShortMoney(wfDis)}</span></div>
-                                            <div class="flex justify-between items-center gap-2"><span class="text-on-surface-variant flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>PO รอเบิก</span><span class="font-bold text-amber-700 truncate">${utils.formatShortMoney(wfPO)}</span></div>
-                                            <div class="flex justify-between items-center gap-2 pt-1.5 border-t border-surface-container"><span class="text-on-surface-variant">คงเหลือ</span><span class="font-bold text-purple-700 truncate">${utils.formatShortMoney(wfRem)}</span></div>
-                                        </div>
-                                    </div>
-                                    <div class="text-[11px] text-on-surface-variant bg-surface-container-low rounded-xl px-3 py-2 flex justify-between tabular-nums">
-                                        <span>ผลการใช้จ่าย (สัญญา)</span>
-                                        <span class="font-bold text-indigo-700">฿${utils.formatMoney(wfSign)} (${pctExp.toFixed(1)}%)</span>
-                                    </div>
-                                </div>
-
                                 <!-- Execution Count Card -->
                                 <div class="bg-surface-container-lowest rounded-2xl border border-slate-200/80 p-5 shadow-sm">
                                     <div class="flex items-center gap-2 pb-3 mb-3 border-b border-surface-container">
@@ -2279,7 +2241,7 @@
                     }
                     if (!res.success) throw new Error(res.message);
                     const insts = res.installments || []; const progs = res.progress || []; let totalAmt = 0, totalPaid = 0, totalPile = 0;
-                    let instRows = insts.map(i => { const d = i.disbursement || {}; const pAmt = Number(d.paid_amount || 0); const pPile = Number(d.pile_return_amount || 0); totalAmt += Number(i.installment_amount); totalPaid += pAmt; totalPile += pPile; return `<tr class="hover:bg-blue-50/50 transition-colors"><td class="px-4 py-3 border-b text-center text-xs font-bold text-slate-500">งวด ${i.installment_no}</td><td class="px-4 py-3 border-b text-right text-sm font-semibold text-slate-800">${utils.formatMoney(i.installment_amount)}</td><td class="px-4 py-3 border-b"><input type="number" id="paid_${i.id}" value="${d.paid_amount || ''}" max="${i.installment_amount}" oninput="handlers.calcDisburseRow('${i.id}', ${i.installment_amount})" class="w-full min-w-[100px] border border-slate-300 p-2 rounded-lg outline-none text-right text-sm focus:ring-2 focus:ring-primary font-medium text-blue-700" placeholder="0.00"></td><td class="px-4 py-3 border-b text-right text-sm font-bold text-orange-600" id="pile_${i.id}">${utils.formatMoney(pPile)}</td><td class="px-4 py-3 border-b"><input type="date" id="date_${i.id}" value="${d.payment_date || ''}" class="w-full border border-slate-300 p-2 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary text-slate-600"></td><td class="px-4 py-3 border-b"><input type="text" id="det_${i.id}" value="${utils.esc(d.payment_detail || '')}" placeholder="คำอธิบาย..." class="w-full min-w-[140px] border border-slate-300 p-2 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary"></td><td class="px-4 py-3 border-b text-center"><button onclick="handlers.saveDisburse('${i.id}')" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-blue-700 shadow-sm transition">บันทึก</button></td></tr>`; }).join('');
+                    let instRows = insts.map(i => { const d = i.disbursement || {}; const instAmt = Number(i.installment_amount || 0); const hasDisb = Boolean(d.id || (d.paid_amount !== undefined && d.paid_amount !== null && d.paid_amount !== '')); const pAmt = Number(d.paid_amount || 0); const pPile = (d.pile_return_amount !== undefined && d.pile_return_amount !== null) ? Number(d.pile_return_amount) : (hasDisb ? Math.max(0, instAmt - pAmt) : 0); totalAmt += instAmt; totalPaid += pAmt; totalPile += pPile; return `<tr class="hover:bg-blue-50/50 transition-colors"><td class="px-4 py-3 border-b text-center text-xs font-bold text-slate-500">งวด ${i.installment_no}</td><td class="px-4 py-3 border-b text-right text-sm font-semibold text-slate-800">${utils.formatMoney(instAmt)}</td><td class="px-4 py-3 border-b"><input type="number" id="paid_${i.id}" value="${hasDisb ? d.paid_amount : ''}" max="${instAmt}" oninput="handlers.calcDisburseRow('${i.id}', ${instAmt})" class="w-full min-w-[100px] border border-slate-300 p-2 rounded-lg outline-none text-right text-sm focus:ring-2 focus:ring-primary font-medium text-blue-700" placeholder="0.00"></td><td class="px-4 py-3 border-b text-right text-sm font-bold text-orange-600" id="pile_${i.id}">${utils.formatMoney(pPile)}</td><td class="px-4 py-3 border-b"><input type="date" id="date_${i.id}" value="${d.payment_date || ''}" class="w-full border border-slate-300 p-2 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary text-slate-600"></td><td class="px-4 py-3 border-b"><input type="text" id="det_${i.id}" value="${utils.esc(d.payment_detail || '')}" placeholder="คำอธิบาย..." class="w-full min-w-[140px] border border-slate-300 p-2 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary"></td><td class="px-4 py-3 border-b text-center"><button onclick="handlers.saveDisburse('${i.id}')" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-blue-700 shadow-sm transition">บันทึก</button></td></tr>`; }).join('');
                     let html = `<div class="mb-6"><button onclick="app.navigate('workflow', '${itemId}')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition mb-3 inline-flex items-center gap-1">← กลับหน้า Workflow</button><h2 class="text-2xl font-bold text-slate-800">บริหารสัญญาและการเบิกจ่าย</h2><p class="text-slate-500 mt-1 text-sm flex flex-wrap items-center gap-2"> ${p.budget_code ? `<span class="font-mono bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded text-indigo-800 font-bold" title="รหัสโครงการ e-GP">e-GP: ${utils.esc(p.budget_code)}</span>` : `<span class="bg-slate-100 border border-slate-200 text-slate-400 px-2 py-0.5 rounded text-xs">ยังไม่ระบุรหัส e-GP</span>`} ${p.budget_code2 ? `<span class="font-mono bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded text-blue-700 font-bold" title="รหัสงบประมาณ">รหัสงบฯ: ${utils.esc(p.budget_code2)}</span>` : ''} <span>${utils.esc(p.item_name || p.project_name)}</span></p></div><div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-6"><div class="p-5 border-b border-slate-100 bg-slate-50"><h3 class="font-bold text-slate-800 text-lg">1. ตารางติดตามการเบิกจ่ายจริงตามงวดงาน</h3></div><div class="overflow-x-auto p-1"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-slate-100/50 text-slate-500 text-xs uppercase tracking-wider"><tr><th class="px-4 py-3 text-center">งวดงาน</th><th class="px-4 py-3 text-right">ราคางวดงาน</th><th class="px-4 py-3">ยอดเบิกจ่ายแล้ว (บาท)</th><th class="px-4 py-3 text-right">คืนค่าเสาเข็ม/ค่างาน</th><th class="px-4 py-3">วันที่เบิกจ่าย</th><th class="px-4 py-3">รายละเอียด</th><th class="px-4 py-3 text-center">จัดการ</th></tr></thead><tbody>${instRows}</tbody><tfoot class="bg-slate-50/80 font-bold text-sm border-t-2 border-slate-200"><tr><td class="px-4 py-4 text-center">สรุปรวม</td><td class="px-4 py-4 text-right text-slate-800 text-base">${utils.formatMoney(totalAmt)}</td><td class="px-4 py-4 text-right text-emerald-600 text-base" id="total_paid">${utils.formatMoney(totalPaid)}</td><td class="px-4 py-4 text-right text-orange-600 text-base" id="total_pile">${utils.formatMoney(totalPile)}</td><td colspan="3"></td></tr></tfoot></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 h-fit"><h3 class="font-bold text-slate-800 text-lg mb-5 pb-3 border-b border-slate-100">2. บันทึกปัญหา / อุปสรรค</h3><div class="space-y-4"><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">ปัญหา / อุปสรรค</label><textarea id="prog_prob" rows="4" placeholder="ระบุปัญหาอุปสรรค (ถ้ามี) หรือเว้นว่างไว้" class="w-full border border-slate-300 rounded-xl p-3 outline-none text-sm focus:ring-2 focus:ring-red-400 transition"></textarea></div><button onclick="handlers.saveProgress('${res.contract.id}')" class="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-slate-800 mt-2 shadow-md transition">บันทึกรายงาน</button></div></div><div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 h-fit"><h3 class="font-bold text-slate-800 text-lg mb-5 pb-3 border-b border-slate-100 flex items-center gap-2"><span class="text-xl">⏱️</span> ประวัติรายงาน</h3><div class="space-y-5 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">${progs.length === 0 ? '<div class="text-center py-10 bg-slate-50 rounded-xl border border-dashed"><p class="text-sm text-slate-400 font-medium">ยังไม่มีประวัติการบันทึก</p></div>' : progs.map(pr => `<div class="relative pl-5 before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-[-20px] before:w-[3px] before:bg-blue-100 last:before:hidden"><div class="absolute left-[-2px] top-1.5 w-[7px] h-[7px] rounded-full bg-primary ring-4 ring-white"></div><div class="bg-slate-50 border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition"><p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between"><span>${utils.formatDate(pr.created_at)}</span><span class="text-primary">${utils.esc(pr.creator_name)}</span></p>${pr.problem_detail ? `<div class="mt-1 p-2.5 bg-red-50 border border-red-100 rounded-lg"><p class="text-xs font-semibold text-red-700 mb-0.5">⚠️ ปัญหาอุปสรรค:</p><p class="text-xs text-red-600">${utils.esc(pr.problem_detail)}</p></div>` : '<p class="text-sm text-slate-500 italic">อัปเดตสถานะล่าสุด (ไม่มีปัญหา)</p>'}</div></div>`).join('')}</div></div></div>`; document.getElementById('page-container').innerHTML = html;
                 } catch (e) { ui.toast(e.message, 'error'); } finally { ui.hideLoader(); }
             },
@@ -2779,21 +2741,6 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 });
             },
 
-            setDashChartMode: (mode) => {
-                window._dashChartMode = mode;
-                const barsWrap = document.getElementById('dashStageBarsWrap');
-                const chartWrap = document.getElementById('dashStageChartWrap');
-                const btnBars = document.getElementById('btnDashModeBars');
-                const btnChart = document.getElementById('btnDashModeChart');
-                if (barsWrap) barsWrap.classList.toggle('hidden', mode !== 'bars');
-                if (chartWrap) chartWrap.classList.toggle('hidden', mode !== 'chart');
-                if (btnBars) btnBars.className = `px-2.5 py-1 rounded-lg transition flex items-center gap-1 ${mode === 'bars' ? 'bg-white text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'}`;
-                if (btnChart) btnChart.className = `px-2.5 py-1 rounded-lg transition flex items-center gap-1 ${mode === 'chart' ? 'bg-white text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'}`;
-                if (mode === 'chart' && window.stipsCharts && window.stipsCharts.filterStages) {
-                    setTimeout(() => window.stipsCharts.filterStages.resize(), 60);
-                }
-            },
-
             applyDashFilters: () => {
                 const sheetFilter = document.getElementById('filterSheet') ? document.getElementById('filterSheet').value : 'ALL';
                 const statusFilter = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : 'ALL';
@@ -2802,7 +2749,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 const filtered = (window.rawDashboardData || []).filter(item => {
                     const matchSheet = (sheetFilter === 'ALL') || (item.sourceSheet === sheetFilter);
                     const matchStatus = (statusFilter === 'ALL') || (String(item.statusNo) === statusFilter);
-                    const flow = utils.getStepFlow(item.statusNo, item.poAmount, item.disbursed);
+                    const flow = utils.getStepFlow(item.statusNo, item.poAmount, item.disbursed, item.pileReturn);
                     const matchSearch = ((item.institution || '').toLowerCase().includes(searchKeyword)) ||
                         ((item.item || '').toLowerCase().includes(searchKeyword)) ||
                         ((item.budgetCode || '').toLowerCase().includes(searchKeyword)) ||
@@ -2859,7 +2806,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 let html = '';
                 let mobileHtml = '';
                 filtered.slice(0, 100).forEach(r => {
-                    const doneBadge = utils.renderStatusBadge(r.statusNo, r.poAmount, r.disbursed);
+                    const doneBadge = utils.renderStatusBadge(r.statusNo, r.poAmount, r.disbursed, r.pileReturn);
                     const poVal = r.poAmount > 0 ? Math.max(0, r.poAmount - r.disbursed) : 0;
                     const remVal = Math.max(0, r.budget - (r.poAmount || 0));
 
@@ -2926,7 +2873,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         </div>`;
                 });
 
-                if (window.stipsCharts && window.stipsCharts.filterStages) window.stipsCharts.filterStages.destroy();
+                if (window.stipsCharts && window.stipsCharts.filterStagesH) window.stipsCharts.filterStagesH.destroy();
                 const fCountConst = new Array(utils.STAGE_LABELS.length).fill(0);
                 const fCountEquip = new Array(utils.STAGE_LABELS.length).fill(0);
                 const fBudConst = new Array(utils.STAGE_LABELS.length).fill(0);
@@ -2942,68 +2889,66 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     }
                 });
 
-                // Render Stitch 10-Step Horizontal Stacked Progress Bars
-                const barsEl = document.getElementById('dashStageBarsContainer');
-                if (barsEl) {
-                    const totalItems = Math.max(1, filtered.length);
-                    const maxStepCount = Math.max(1, ...utils.STAGE_LABELS.map((_, i) => fCountConst[i] + fCountEquip[i]));
-                    barsEl.innerHTML = utils.STAGE_LABELS.map((label, i) => {
-                        const cCount = fCountConst[i];
-                        const eCount = fCountEquip[i];
-                        const sumCount = cCount + eCount;
-                        const sumBud = fBudConst[i] + fBudEquip[i];
-                        const cPct = (cCount / maxStepCount) * 100;
-                        const ePct = (eCount / maxStepCount) * 100;
-                        const sharePct = ((sumCount / totalItems) * 100).toFixed(1);
-                        return `
-                            <div class="space-y-1">
-                                <div class="flex items-center justify-between gap-2 text-xs">
-                                    <span class="font-semibold text-on-surface truncate">${utils.esc(label)}</span>
-                                    <span class="shrink-0 tabular-nums font-bold text-on-surface">
-                                        ${sumCount.toLocaleString()} <span class="font-normal text-on-surface-variant text-[11px]">(${sharePct}%)</span>
-                                    </span>
-                                </div>
-                                <div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden flex" title="สิ่งก่อสร้าง: ${cCount} รายการ (${utils.formatMoney(fBudConst[i])} บ.) | ครุภัณฑ์: ${eCount} รายการ (${utils.formatMoney(fBudEquip[i])} บ.)">
-                                    ${cCount > 0 ? `<div class="h-full bg-[#3b82f6] transition-all duration-500" style="width: ${cPct.toFixed(1)}%"></div>` : ''}
-                                    ${eCount > 0 ? `<div class="h-full bg-[#9333ea] transition-all duration-500" style="width: ${ePct.toFixed(1)}%"></div>` : ''}
-                                </div>
-                                <div class="flex justify-between text-[10px] text-outline tabular-nums">
-                                    <span>ก่อสร้าง ${cCount} · ครุภัณฑ์ ${eCount}</span>
-                                    <span>งบ ${utils.formatShortMoney(sumBud)}</span>
-                                </div>
-                            </div>`;
-                    }).join('');
-                }
-
-                const fCanvasEl = document.getElementById('filterStagesBarChart');
-                if (fCanvasEl) {
-                    const fCtx = fCanvasEl.getContext('2d');
-                    window.stipsCharts.filterStages = new Chart(fCtx, {
+                // Render Chart.js Horizontal Paired Bar Chart (2 Bars per Stage)
+                const hCanvasEl = document.getElementById('filterStagesHorizontalChart');
+                if (hCanvasEl) {
+                    const hCtx = hCanvasEl.getContext('2d');
+                    window.stipsCharts.filterStagesH = new Chart(hCtx, {
                         type: 'bar',
                         data: {
                             labels: utils.STAGE_LABELS,
                             datasets: [
-                                { label: 'ที่ดิน/สิ่งก่อสร้าง', data: fCountConst, backgroundColor: '#3b82f6', borderRadius: 4 },
-                                { label: 'ครุภัณฑ์', data: fCountEquip, backgroundColor: '#9333ea', borderRadius: 4 }
+                                {
+                                    label: 'ที่ดิน/สิ่งก่อสร้าง',
+                                    data: fCountConst,
+                                    backgroundColor: '#3b82f6',
+                                    borderRadius: 4,
+                                    barPercentage: 0.85,
+                                    categoryPercentage: 0.78
+                                },
+                                {
+                                    label: 'ครุภัณฑ์',
+                                    data: fCountEquip,
+                                    backgroundColor: '#9333ea',
+                                    borderRadius: 4,
+                                    barPercentage: 0.85,
+                                    categoryPercentage: 0.78
+                                }
                             ]
                         },
                         options: {
-                            responsive: true, maintainAspectRatio: false, layout: { padding: { top: 25 } },
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            layout: { padding: { right: 32 } },
                             plugins: {
                                 legend: { display: true, position: 'top', labels: { font: { family: 'Sarabun' } } },
-                                tooltip: { callbacks: { label: (c) => ` จำนวน: ${c.raw} รายการ (งบ: ${(c.datasetIndex === 0 ? fBudConst[c.dataIndex] : fBudEquip[c.dataIndex]).toLocaleString()} บาท)` } },
-                                datalabels: { color: '#475569', anchor: 'end', align: 'top', font: { family: 'Sarabun', weight: 'bold', size: 11 }, formatter: (v) => v > 0 ? v : '' }
+                                tooltip: {
+                                    callbacks: {
+                                        label: (c) => ` ${c.dataset.label}: ${c.raw} รายการ (งบ: ${(c.datasetIndex === 0 ? fBudConst[c.dataIndex] : fBudEquip[c.dataIndex]).toLocaleString()} บาท)`
+                                    }
+                                },
+                                datalabels: {
+                                    color: '#334155',
+                                    anchor: 'end',
+                                    align: 'right',
+                                    offset: 4,
+                                    font: { family: 'Sarabun', weight: 'bold', size: 11 },
+                                    formatter: (v) => v > 0 ? v : ''
+                                }
                             },
                             scales: {
-                                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Sarabun' }, stepSize: 1 } },
                                 x: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(0,0,0,0.05)' },
+                                    ticks: { display: false }
+                                },
+                                y: {
                                     grid: { display: false },
                                     ticks: {
-                                        font: { family: 'Sarabun', size: 13, weight: 'bold' },
+                                        font: { family: 'Sarabun', size: 12, weight: 'bold' },
                                         color: '#334155',
-                                        autoSkip: false,
-                                        maxRotation: 40,
-                                        minRotation: 0
+                                        autoSkip: false
                                     }
                                 }
                             }
@@ -3151,7 +3096,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         </div>
                         <div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row lg:items-end xl:items-center gap-3">
                             <div class="flex items-center">
-                                ${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount)}
+                                ${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount, p.pile_return_amount)}
                             </div>
                             <div class="flex flex-wrap gap-2 mt-3 sm:mt-0">
                                 <button onclick="handlers.openEditItemModal('${p.id}')" class="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-50">✏️ แก้ไข</button>
@@ -3205,17 +3150,22 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         <thead class="bg-slate-50 border-b border-slate-200 text-slate-600">
                             <tr>
                                 <th class="px-4 py-3 font-semibold w-48 border-r border-slate-100">Username (สถานศึกษา)</th>
-                                <th class="px-4 py-3 font-semibold text-blue-600 w-32 border-r border-slate-100">รหัสผ่าน</th>
+                                <th class="px-4 py-3 font-semibold text-blue-600 border-r border-slate-100 relative select-none" style="width: var(--user-col-pwd-w, 140px); min-width: var(--user-col-pwd-w, 140px); max-width: var(--user-col-pwd-w, 140px);">
+                                    <div class="truncate pr-2">รหัสผ่าน</div>
+                                    <div class="col-resizer" onmousedown="ui.initColResize(event, '--user-col-pwd-w', 80, 500)" ontouchstart="ui.initColResize(event, '--user-col-pwd-w', 80, 500)" ondblclick="ui.resetColWidth(event, '--user-col-pwd-w', 140)" title="คลิกลากเพื่อปรับขนาด (ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น)"></div>
+                                </th>
                                 <th class="px-4 py-3 font-semibold w-64 border-r border-slate-100">ข้อมูลผู้รับผิดชอบ</th>
                                 <th class="px-4 py-3 font-semibold text-center w-24 border-r border-slate-100">สิทธิ์</th>
                                 <th class="px-4 py-3 font-semibold text-center w-32">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100"> 
-                            ${filteredUsers.map(u => ` 
+                            ${filteredUsers.map(u => {
+                                const rawPwd = u.password_plain || u.password_hash || '******';
+                                return ` 
                                 <tr class="hover:bg-slate-50 transition-colors"> 
                                     <td class="px-4 py-3 font-bold text-slate-900 border-r border-slate-100">${utils.esc(u.username)}</td> 
-                                    <td class="px-4 py-3 text-blue-600 font-mono text-sm break-all border-r border-slate-100">${utils.esc(u.password_plain || u.password_hash || '******')}</td>
+                                    <td class="px-4 py-3 text-blue-600 font-mono text-sm border-r border-slate-100" style="width: var(--user-col-pwd-w, 140px); min-width: var(--user-col-pwd-w, 140px); max-width: var(--user-col-pwd-w, 140px);"><div class="truncate" title="${utils.esc(rawPwd)}">${utils.esc(rawPwd)}</div></td>
                                     <td class="px-4 py-3 text-slate-700 border-r border-slate-100"> 
                                         <div class="font-medium text-primary">${utils.esc(u.full_name || 'ยังไม่ระบุ')}</div> 
                                         <div class="text-xs text-slate-500 mt-1 flex flex-col gap-0.5"> 
@@ -3231,7 +3181,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                                         </div> 
                                     </td> 
                                 </tr> 
-                            `).join('')} 
+                            `;
+                            }).join('')} 
                         </tbody>
                     </table>
                     </div>
@@ -3544,7 +3495,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
 
                 const filtered = (window.rawReportData || []).filter(p => {
                     const matchYear = year === '' || String(p.fiscal_year) === year;
-                    const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
+                    const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount, p.pile_return_amount);
                     const matchSearch = search === '' ||
                         (p.project_name || '').toLowerCase().includes(search) ||
                         (p.institution_name || '').toLowerCase().includes(search) ||
@@ -3699,7 +3650,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 if (groupBy && groupBy !== '') {
                     sortedFiltered.forEach(p => {
                         let key = String(p[groupBy] || 'ไม่ระบุ');
-                        if (groupBy === 'current_status') key = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount).stageFullName;
+                        if (groupBy === 'current_status') key = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount, p.pile_return_amount).stageFullName;
                         if (!groupedData[key]) groupedData[key] = [];
                         groupedData[key].push(p);
                     });
@@ -3719,7 +3670,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     tBud += b; tSign += sign; tPO += po; tDis += dis; tExp += exp; tRem += rem;
 
                     const isDelayed = p.current_status < 8 && p.contract_end_date && new Date(p.contract_end_date) < new Date();
-                    const isCompleted = b > 0 && dis >= b;
+                    const isCompleted = utils.getStepFlow(p.current_status, sign, dis, p.pile_return_amount).isCompleted8;
 
                     const isChecked = state.checkedReportItems && !!state.checkedReportItems[p.id];
 
@@ -3746,7 +3697,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
 
                     // Status (ขั้นตอนที่แล้วเสร็จ)
                     if (cols.col_stat_done) {
-                        row += `<td class="p-3 text-center border-r border-slate-100">${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount)}</td>`;
+                        row += `<td class="p-3 text-center border-r border-slate-100">${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount, p.pile_return_amount)}</td>`;
                     }
 
                     if (cols.col_bud) row += `<td class="p-3 text-right font-bold text-slate-800 border-r border-slate-100 ${isDelayed || isCompleted ? 'text-inherit' : ''}">${utils.formatMoney(b)}</td>`;
@@ -3780,7 +3731,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     const dis = Number(p.disbursed_amount) || 0;
                     const po = sign > 0 ? Math.max(0, sign - dis) : 0;
                     const isDelayed = p.current_status < 8 && p.contract_end_date && new Date(p.contract_end_date) < new Date();
-                    const isCompleted = b > 0 && dis >= b;
+                    const isCompleted = utils.getStepFlow(p.current_status, sign, dis, p.pile_return_amount).isCompleted8;
                     const isChecked = state.checkedReportItems && !!state.checkedReportItems[p.id];
                     const cardTone = isDelayed ? 'border-red-300 bg-red-50/40' : isCompleted ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200/80 bg-surface-container-lowest';
                     const hasProb = p.problem_detail && p.problem_detail !== '-' && p.problem_detail.trim() !== '';
@@ -3809,7 +3760,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                             </div>
 
                             <div class="flex flex-wrap items-center justify-between gap-2">
-                                <div class="max-w-full overflow-x-auto">${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount)}</div>
+                                <div class="max-w-full overflow-x-auto">${utils.renderStatusBadge(p.current_status, p.po_amount, p.disbursed_amount, p.pile_return_amount)}</div>
                                 ${p.contract_end_date ? `<div class="shrink-0">${utils.getContractCountdownBadge(p.contract_end_date)}</div>` : ''}
                             </div>
 
@@ -3952,7 +3903,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                         const po = sign > 0 ? Math.max(0, sign - dis) : 0;
                         const exp = sign > 0 ? (po + dis) : 0;
                         const rem = Math.max(0, b - exp);
-                        const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
+                        const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount, p.pile_return_amount);
                         return {
                             'ปีงบฯ': p.fiscal_year || '-',
                             'ประเภท': p.item_type || '-',
@@ -4038,7 +3989,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     // แต่งสีและสไตล์แถวข้อมูลใน Excel
                     sourceList.forEach((p, idx) => {
                         const r = idx + 2;
-                        const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount);
+                        const flow = utils.getStepFlow(p.current_status, p.po_amount, p.disbursed_amount, p.pile_return_amount);
 
                         // ใส่สีคอลัมน์ขั้นตอนที่แล้วเสร็จ (Red to Green)
                         if (statusColIdx >= 0) {
@@ -4413,8 +4364,8 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     const disPct = bAmt > 0 ? ((disAmt / bAmt) * 100).toFixed(1) : 0;
                     const itemName = p.item_name || p.project_name || '';
 
-                    const qFlow = utils.getStepFlow(p.current_status, poAmt, disAmt);
-                    const qDoneBadge = utils.renderStatusBadge(p.current_status, poAmt, disAmt);
+                    const qFlow = utils.getStepFlow(p.current_status, poAmt, disAmt, p.pile_return_amount);
+                    const qDoneBadge = utils.renderStatusBadge(p.current_status, poAmt, disAmt, p.pile_return_amount);
                     const qCurBadgeClass = qFlow.isCompleted8 ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-bold' : qFlow.isManagingContract ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-bold' : `${utils.getStatusColor(qFlow.currentStep)} font-bold`;
                     const qCurBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs whitespace-nowrap ${qCurBadgeClass}">${qFlow.isCompleted8 ? '✨' : qFlow.isManagingContract ? '📋' : '●'} ${utils.esc(qFlow.currentName)}</span>`;
 
@@ -5125,7 +5076,7 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                 else if (step === 4) f += `<div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm font-semibold mb-1.5">เริ่มประกาศเชิญชวน <span class="text-red-500">*</span></label><input type="date" id="s4_d" class="border border-slate-200 p-2.5 rounded-xl w-full outline-none focus:ring-2 focus:ring-primary transition"></div><div><label class="block text-sm font-semibold mb-1.5">สิ้นสุดประกาศเชิญชวน <span class="text-red-500">*</span></label><input type="date" id="s4_end" class="border border-slate-200 p-2.5 rounded-xl w-full outline-none focus:ring-2 focus:ring-primary transition"></div></div><div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm font-semibold mb-1.5 text-slate-700">ปัญหา / อุปสรรคในการประกาศเชิญชวน <span class="text-red-500">*</span></label><select id="s4_issue" class="border border-slate-200 p-2.5 rounded-xl w-full outline-none focus:ring-2 focus:ring-primary transition bg-white"><option value="">-- เลือกรายการ --</option><option value="1">1. ผ่าน - คุณสมบัติครบถ้วน (ดำเนินการต่อไปสถานะ 5)</option><option value="2">2. มีผู้เสนอราคารายเดียว (เริ่มกระบวนการใหม่ สถานะ 1)</option><option value="3">3. มีผู้ยื่น แต่ไม่ผ่านคุณสมบัติ (เริ่มกระบวนการใหม่ สถานะ 1)</option><option value="4">4. ไม่มีผู้ยื่นเสนอราคา (เริ่มกระบวนการใหม่ สถานะ 1)</option></select></div><div><label class="block text-sm font-semibold mb-1.5 text-slate-700">หมายเหตุ</label><input type="text" id="s4_note" class="border border-slate-200 p-2.5 rounded-xl w-full outline-none focus:ring-2 focus:ring-primary transition" placeholder="ระบุหมายเหตุ..."></div></div><button onclick="handlers.saveStep4()" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 shadow-sm transition">บันทึกรายงานขั้นตอน →</button>`;
                 else if (step === 5) f += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"><div><label class="block text-sm font-semibold mb-1.5">วันประกาศผู้ชนะ <span class="text-red-500">*</span></label><input type="date" id="s5_d" class="border border-slate-200 p-2.5 rounded-xl w-full outline-none focus:ring-2 focus:ring-primary transition"></div><div><label class="block text-sm font-semibold mb-1.5">ชื่อบริษัทที่ชนะ <span class="text-red-500">*</span></label><input type="text" id="s5_n" class="border border-slate-200 p-2.5 rounded-xl w-full outline-none focus:ring-2 focus:ring-primary transition" placeholder="ระบุชื่อบริษัท..."></div></div><button onclick="handlers.saveStep(${step}, ['s5_d','s5_n'])" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 shadow-sm transition">บันทึกรายงานขั้นตอน →</button>`;
                 else if (step === 6) f += `<div class="mb-4"><label class="block text-sm mb-2 font-bold text-slate-800">ผลการอุทธรณ์ <span class="text-red-500">*</span></label><select id="appeal_opt" onchange="handlers.toggleAppeal()" class="border border-slate-200 p-3 rounded-xl w-full bg-white outline-none focus:ring-2 focus:ring-primary transition font-medium"><option value="">-- เลือกสถานะอุทธรณ์ --</option><option value="1">1. ไม่มีการอุทธรณ์ (ไปสถานะ 7)</option><option value="2">2. มีการอุทธรณ์ แล้วยอมรับผล (เตรียมจัดทำ TOR ใหม่)</option><option value="3">3. ไม่เห็นด้วย/เห็นด้วยบางส่วน (ส่งกรมบัญชีกลาง)</option><option value="4">4. ผลอุทธรณ์ฟังขึ้น (เตรียมจัดทำ TOR ใหม่)</option><option value="5">5. ผลอุทธรณ์ไม่ขึ้น (ดำเนินการต่อ ไปสถานะ 7)</option></select></div><div id="appeal_extra" class="hidden mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200"><label class="block text-sm font-semibold mb-2">แนบหลักฐาน (PDF)</label><input type="file" id="appeal_file" accept=".pdf" class="text-sm w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-blue-700 transition"></div><div id="appeal_btn" class="mt-4"></div>`;
-                else if (step === 7) f += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"><div><label class="block text-xs font-semibold mb-1.5 text-slate-500 uppercase tracking-wider">วงเงินงบประมาณ</label><input type="text" value="${utils.formatMoney(p.budget_amount)}" disabled class="w-full bg-slate-100 border-none p-3 rounded-xl text-slate-500 font-semibold"></div><div><label class="block text-xs font-semibold mb-1.5 text-blue-600 uppercase tracking-wider">ราคาสัญญา (บาท) <span class="text-red-500">*</span></label><input type="number" id="contract_amt" oninput="handlers.calcRemaining(${p.budget_amount})" min="0" step="0.01" class="w-full border border-blue-200 bg-blue-50/30 p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary font-bold text-blue-700 transition"></div><div><label class="block text-xs font-semibold mb-1.5 text-emerald-600 uppercase tracking-wider">เงินเหลือจ่าย (บาท)</label><input type="text" id="remain_amt" readonly class="w-full bg-emerald-50 border-none p-3 rounded-xl font-bold text-emerald-600"></div><div><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">จำนวนงวดงาน <span class="text-red-500">*</span></label><select id="inst_count" onchange="handlers.genInst()" class="w-full border border-slate-200 p-3 rounded-xl outline-none bg-white focus:ring-2 focus:ring-primary transition"><option value="0">เลือกจำนวนงวด...</option>${Array.from({ length: 16 }, (_, i) => `<option value="${i + 1}">${i + 1} งวด</option>`).join('')}</select></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"><div><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">เริ่มสัญญา <span class="text-red-500">*</span></label><input type="date" id="c_start" class="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary transition"></div><div><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">สิ้นสุดสัญญา <span class="text-red-500">*</span></label><input type="date" id="c_end" class="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary transition"></div></div><div class="mb-5"><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">แนบไฟล์สัญญา (PDF) <span class="text-slate-400 font-normal">(ไม่บังคับ)</span></label><input type="file" id="c_file" accept=".pdf" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 transition"></div><div id="inst_table" class="hidden mt-4 mb-5 border border-slate-200 rounded-2xl overflow-hidden shadow-sm"><table class="w-full text-sm bg-white text-left"><thead class="bg-slate-50 border-b border-slate-100"><tr><th class="p-3 font-semibold text-slate-600 text-center">งวดงาน</th><th class="p-3 font-semibold text-slate-600 text-right">ราคางวดงาน (บาท)</th><th class="p-3 font-semibold text-slate-600 text-right">ร้อยละ (%)</th></tr></thead><tbody id="inst_tbody" class="divide-y divide-slate-100"></tbody></table><p id="inst_err" class="text-xs text-danger p-3 hidden font-medium bg-red-50 text-center border-t border-red-100">⚠️ ยอดรวมค่างวดงานต้องเท่ากับราคาสัญญาพอดี</p></div><button id="btn_save_c" onclick="handlers.saveContract()" disabled class="bg-primary text-white px-6 py-3.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed w-full transition shadow-md">บันทึกข้อมูลและไปสถานะที่ 8</button>`;
+                else if (step === 7) f += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"><div><label class="block text-xs font-semibold mb-1.5 text-slate-500 uppercase tracking-wider">วงเงินงบประมาณ</label><input type="text" value="${utils.formatMoney(p.budget_amount)}" disabled class="w-full bg-slate-100 border-none p-3 rounded-xl text-slate-500 font-semibold"></div><div><label class="block text-xs font-semibold mb-1.5 text-blue-600 uppercase tracking-wider">ราคาสัญญา (บาท) <span class="text-red-500">*</span></label><input type="number" id="contract_amt" oninput="handlers.calcRemaining(${p.budget_amount})" min="0" step="0.01" class="w-full border border-blue-200 bg-blue-50/30 p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary font-bold text-blue-700 transition"></div><div><label class="block text-xs font-semibold mb-1.5 text-emerald-600 uppercase tracking-wider">เงินเหลือจ่าย (บาท)</label><input type="text" id="remain_amt" readonly class="w-full bg-emerald-50 border-none p-3 rounded-xl font-bold text-emerald-600"></div><div><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">จำนวนงวดงาน <span class="text-red-500">*</span></label><select id="inst_count" onchange="handlers.genInst()" class="w-full border border-slate-200 p-3 rounded-xl outline-none bg-white focus:ring-2 focus:ring-primary transition"><option value="0">เลือกจำนวนงวด...</option>${Array.from({ length: 16 }, (_, i) => `<option value="${i + 1}">${i + 1} งวด</option>`).join('')}</select></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"><div><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">เริ่มสัญญา <span class="text-red-500">*</span></label><input type="date" id="c_start" class="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary transition"></div><div><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">สิ้นสุดสัญญา <span class="text-red-500">*</span></label><input type="date" id="c_end" class="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary transition"></div></div><div class="mb-5"><label class="block text-xs font-semibold mb-1.5 text-slate-600 uppercase tracking-wider">แนบไฟล์สัญญา (PDF) <span class="text-red-500">*</span></label><input type="file" id="c_file" accept=".pdf" required class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100 transition"></div><div id="inst_table" class="hidden mt-4 mb-5 border border-slate-200 rounded-2xl overflow-hidden shadow-sm"><table class="w-full text-sm bg-white text-left"><thead class="bg-slate-50 border-b border-slate-100"><tr><th class="p-3 font-semibold text-slate-600 text-center">งวดงาน</th><th class="p-3 font-semibold text-slate-600 text-right">ราคางวดงาน (บาท)</th><th class="p-3 font-semibold text-slate-600 text-right">ร้อยละ (%)</th></tr></thead><tbody id="inst_tbody" class="divide-y divide-slate-100"></tbody></table><p id="inst_err" class="text-xs text-danger p-3 hidden font-medium bg-red-50 text-center border-t border-red-100">⚠️ ยอดรวมค่างวดงานต้องเท่ากับราคาสัญญาพอดี</p></div><button id="btn_save_c" onclick="handlers.saveContract()" disabled class="bg-primary text-white px-6 py-3.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed w-full transition shadow-md">บันทึกข้อมูลและไปสถานะที่ 8</button>`;
                 else if (step === 8) f += `<button onclick="app.navigate('management', '${p.id}')" class="bg-slate-900 text-white px-6 py-4 rounded-xl text-sm font-medium w-full hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2">เข้าสู่หน้าระบบบริหารสัญญาและการเบิกจ่าย <span class="text-lg">→</span></button>`;
                 f += `</div>`;
                 return f;
@@ -5238,25 +5189,39 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
             },
 
             saveContract: async () => {
+                const cFileInput = document.getElementById('c_file');
+                const f = cFileInput?.files[0];
+                if (!f) {
+                    ui.toast('กรุณาแนบไฟล์สัญญา (PDF) ก่อนบันทึกข้อมูล', 'warning');
+                    if (cFileInput) cFileInput.focus();
+                    return;
+                }
+                const isPdf = f.type === 'application/pdf' || (f.name && f.name.toLowerCase().endsWith('.pdf'));
+                if (!isPdf) {
+                    ui.toast('รองรับเฉพาะไฟล์ PDF เท่านั้น', 'error');
+                    if (cFileInput) cFileInput.focus();
+                    return;
+                }
+                if (!document.getElementById('c_start')?.value || !document.getElementById('c_end')?.value) {
+                    ui.toast('กรุณาระบุวันที่เริ่มสัญญาและสิ้นสุดสัญญา', 'warning');
+                    return;
+                }
+
                 ui.showLoader('กำลังอัปโหลดไฟล์สัญญาไป Google Drive...');
                 try {
                     const itemObj = state.selectedItem || state.selectedProject || {};
                     const itemId = itemObj.id;
-                    const f = document.getElementById('c_file')?.files[0];
                     let fileUrl = '';
-                    if (f) {
-                        if (f.type !== 'application/pdf') throw new Error('รองรับไฟล์ PDF เท่านั้น');
-                        const base64Data = await handlers.getBase64(f);
-                        const uploadFileName = utils.buildUploadFileName('สัญญา', itemObj);
-                        const uploadRes = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
-                            method: "POST",
-                            body: JSON.stringify({ filename: uploadFileName, mimeType: f.type, base64: base64Data }),
-                            headers: { "Content-Type": "text/plain;charset=utf-8" }
-                        });
-                        const driveData = await uploadRes.json();
-                        if (!driveData.success) throw new Error(driveData.error);
-                        fileUrl = driveData.fileUrl;
-                    }
+                    const base64Data = await handlers.getBase64(f);
+                    const uploadFileName = utils.buildUploadFileName('สัญญา', itemObj);
+                    const uploadRes = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
+                        method: "POST",
+                        body: JSON.stringify({ filename: uploadFileName, mimeType: f.type || 'application/pdf', base64: base64Data }),
+                        headers: { "Content-Type": "text/plain;charset=utf-8" }
+                    });
+                    const driveData = await uploadRes.json();
+                    if (!driveData.success) throw new Error(driveData.error);
+                    fileUrl = driveData.fileUrl;
 
                     const contractPayload = {
                         signed_amount: Number(document.getElementById('contract_amt').value),
@@ -5299,13 +5264,14 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
 
             calcDisburseRow: (id, maxVal) => {
                 const inp = document.getElementById(`paid_${id}`);
+                const isEmpty = String(inp.value ?? '').trim() === '';
                 let val = Number(inp.value || 0);
                 if (val > maxVal) {
                     ui.toast('เบิกจ่ายห้ามเกินยอดงวดงาน', 'warning');
                     val = maxVal;
                     inp.value = maxVal;
                 }
-                document.getElementById(`pile_${id}`).innerText = utils.formatMoney(maxVal - val);
+                document.getElementById(`pile_${id}`).innerText = utils.formatMoney(isEmpty ? 0 : Math.max(0, maxVal - val));
 
                 let tPaid = 0; let tPile = 0;
                 document.querySelectorAll('[id^="paid_"]').forEach(el => tPaid += Number(el.value || 0));
@@ -5446,6 +5412,65 @@ ALTER TABLE public.system_announcements DISABLE ROW LEVEL SECURITY;</pre>
                     `;
                 });
                 listEl.innerHTML = html;
+            },
+
+            // =========================================================================
+            // PILE RETURN / CONTRACT DEDUCTION HELPER (FOR STAGE 10 COMPLETION)
+            // =========================================================================
+            attachPileReturnAmounts: async (list) => {
+                if (!Array.isArray(list) || list.length === 0 || !supabaseClient) return;
+                try {
+                    const candidates = list.filter(p => {
+                        const s = parseInt(p.current_status, 10) || 1;
+                        const po = Number(p.po_amount) || 0;
+                        const dis = Number(p.disbursed_amount) || 0;
+                        return s === 8 && po > 0 && dis > 0 && dis < po;
+                    });
+                    if (candidates.length === 0) return;
+
+                    const itemIds = [...new Set(candidates.map(p => p.id).filter(Boolean))];
+                    const { data: contracts, error: cErr } = await supabaseClient
+                        .from('contracts')
+                        .select('id, item_id')
+                        .in('item_id', itemIds);
+                    if (cErr || !contracts || contracts.length === 0) return;
+
+                    const contractToItem = {};
+                    contracts.forEach(c => { if (c.id && c.item_id) contractToItem[c.id] = c.item_id; });
+                    const contractIds = Object.keys(contractToItem);
+
+                    const { data: insts, error: iErr } = await supabaseClient
+                        .from('contract_installments')
+                        .select('id, contract_id, installment_amount')
+                        .in('contract_id', contractIds);
+                    if (iErr || !insts || insts.length === 0) return;
+
+                    const instMap = {};
+                    insts.forEach(i => { instMap[i.id] = i; });
+                    const instIds = Object.keys(instMap);
+
+                    const { data: disbs, error: dErr } = await supabaseClient
+                        .from('contract_disbursements')
+                        .select('installment_id, paid_amount')
+                        .in('installment_id', instIds);
+                    if (dErr || !disbs || disbs.length === 0) return;
+
+                    const pileByItem = {};
+                    disbs.forEach(d => {
+                        const inst = instMap[d.installment_id];
+                        if (!inst) return;
+                        const itemId = contractToItem[inst.contract_id];
+                        if (!itemId) return;
+                        const pile = Math.max(0, (Number(inst.installment_amount) || 0) - (Number(d.paid_amount) || 0));
+                        pileByItem[itemId] = (pileByItem[itemId] || 0) + pile;
+                    });
+
+                    candidates.forEach(p => {
+                        if (pileByItem[p.id] !== undefined) {
+                            p.pile_return_amount = Math.max(Number(p.pile_return_amount) || 0, pileByItem[p.id]);
+                        }
+                    });
+                } catch (_) { }
             },
 
             // =========================================================================
